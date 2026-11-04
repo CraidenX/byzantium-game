@@ -160,6 +160,7 @@ details.log summary{cursor:pointer;color:var(--gold2);font-size:17px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .speeds{display:flex;flex-direction:column;gap:8px;margin:8px 0 10px}
 .toolbar .btn{padding:7px 12px;font-size:15px}
+.scene{display:block;width:100%;height:auto;aspect-ratio:10/3;border-radius:8px;margin:2px 0 12px;box-shadow:0 4px 14px rgba(0,0,0,.45)}
 .hint{display:block;font-size:12.5px;color:var(--muted);margin-top:4px}
 .hall{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}
 .hall .opt{padding:8px 10px}
@@ -684,7 +685,7 @@ var RANDOM = [
 
 // Союзники за высокую помощь Запада и единство (приходят при 75 и при 100)
 var ALLIES = {
-  west: ['cretans', 'venice_fleet', 'hospitallers'],
+  west: ['cretans', 'venice_fleet', 'hospitallers', 'burgundy'],
   unity: ['militia', 'orhan_turks', 'toledo']
 };
 var ALLY_EVENTS = [
@@ -721,6 +722,12 @@ var ALLY_EVENTS = [
     options: function () { return [
       opt('Принять рыцарей', { garrison: 400, unity: -2 }, { fn: function (s) { s.flags.hosp = true; } })
     ]; } },
+  { id: 'burgundy', ally: true, title: 'Бургундские рыцари',
+    text: 'Герцог Бургундии Филипп Добрый давно мечтает о крестовом походе, но то война с французами, то мятежные города не пускают. Наконец он прислал отряд рыцарей и арбалетчиков — небольшой, но из лучших в Европе.',
+    note: 'В действительности Филипп так и не выступил. В 1454 году, уже после падения города, он дал на пиру в Лилле знаменитый «Обет фазана» — поклялся идти на турок. Поход не состоялся.',
+    options: function () { return [
+      opt('Принять бургундцев', { garrison: 500, unity: -2 }, { fn: function (s) { s.flags.burgundians = true; } })
+    ]; } },
   { id: 'militia', ally: true, title: 'Городское ополчение',
     text: 'После проповеди в храме Святых Апостолов к дворцу пришли сотни горожан: ремесленники, лавочники, даже монахи. Просят оружия.',
     note: 'В 1453 году на стенах стояло около пяти тысяч греков, большинство — горожане и монахи, а не профессиональные воины.',
@@ -744,6 +751,20 @@ var ALLY_EVENTS = [
 ];
 
 var MONEY_EVENTS = [
+  { id: 'thoisy3', w: 3, cond: function (s) { return s.flags.thoisyHelped && H(s) >= 2 && H(s) <= 6; }, title: 'Генуя жалуется',
+    text: 'Генуэзский консул из Перы приносит жалобу: бургундские галеры, которым вы дали приют, грабили греческие и генуэзские суда у Трапезунда. Генуя уже пишет герцогу Бургундскому, а консул ждёт ваших объяснений.',
+    note: 'Генуэзцы действительно пожаловались Филиппу Доброму на пиратство де Туази, и тому пришлось вернуться в Константинополь.',
+    options: function () { return [
+      opt('Возместить убытки генуэзцам', { gold: -8, west: 3 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' }),
+      opt('Заступиться за бургундцев', { west: -3 }, { fn: function (s) { s.flags.burgundyFriend = true; }, result: 'Генуэзцы недовольны. Зато в Бургундии запомнят, кто был им другом.' })
+    ]; } },
+  { id: 'thoisy4', w: 3, cond: function (s) { return s.flags.thoisyHelped && H(s) >= 2 && H(s) <= 6; }, title: 'Ваврен зовёт на Дунай',
+    text: 'Бургундский капитан Валеран де Ваврен собирается подняться по Дунаю, чтобы вместе с венграми и валахами снова ударить по туркам. Он зовёт с собой де Туази и просит у вас лоцманов, знающих реку.',
+    note: 'В 1445 году Ваврен действительно ходил по Дунаю с валахами. Де Туази идти отказался и увёл свои корабли домой, в Ниццу.',
+    options: function () { return [
+      opt('Дать лоцманов и проводников', { gold: -5, west: 4, threat: 3 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.burgundyFriend = true; } }),
+      opt('Остаться в стороне', {})
+    ]; } },
   { id: 'thoisy2', w: 4, cond: function (s) { return s.flags.thoisyHelped && H(s) <= 5; }, title: 'Бургундец в плену',
     text: 'Тревожные вести с Кавказа. Жоффруа де Туази решил захватить корабли с шёлком у грузинских берегов, хотя император Трапезунда предупреждал, что грузины — христиане. В порту Вати его ждала засада: многие бургундцы убиты, сам рыцарь в плену. Его люди просят вас заступиться.',
     note: 'Так и было. Грузин предупредили греки из Трапезунда. Освободили де Туази при посредничестве трапезундского императора, а на обратном пути он успел захватить ещё два греческих судна с рыбой.',
@@ -806,13 +827,16 @@ var WHEN = {
   thoisy: 'до декабря 1445 (полугодие ≤ 3)', thoisy2: 'если в «Бургундских галерах» дали пристанище; до декабря 1446 (полугодие ≤ 5)',
   theophilos: 'с января 1450 (полугодие ≥ 12)', kantakouzenos: 'с января 1450 (полугодие ≥ 12)',
   tithe: 'с января 1447 (полугодие ≥ 6)', magnates: 'с января 1446 (полугодие ≥ 4)',
-  cretans: 'помощь Запада 75 или 100 — приходит один из трёх: критяне, венецианские галеры, иоанниты',
-  venice_fleet: 'помощь Запада 75 или 100 — приходит один из трёх: критяне, венецианские галеры, иоанниты',
-  hospitallers: 'помощь Запада 75 или 100 — приходит один из трёх: критяне, венецианские галеры, иоанниты',
+  cretans: 'помощь Запада 75 или 100 — приходит один из четырёх: критяне, венецианские галеры, иоанниты, бургундцы',
+  venice_fleet: 'помощь Запада 75 или 100 — приходит один из четырёх: критяне, венецианские галеры, иоанниты, бургундцы',
+  hospitallers: 'помощь Запада 75 или 100 — приходит один из четырёх: критяне, венецианские галеры, иоанниты, бургундцы',
   militia: 'единство 75 или 100 — приходит один из трёх: ополчение, турки Орхана, де Толедо',
   orhan_turks: 'единство 75 или 100 — приходит один из трёх: ополчение, турки Орхана, де Толедо',
   toledo: 'единство 75 или 100 — приходит один из трёх: ополчение, турки Орхана, де Толедо',
   loredan_early: 'если Венеции дали льготы в «Венецианских галерах»; с июля 1452 (полугодие ≥ 17), обязательно',
+  burgundy: 'помощь Запада 75 или 100 — один из четырёх; если вы заступались за бургундцев (Генуя жалуется) или дали лоцманов Ваврену, придут первыми',
+  thoisy3: 'если в «Бургундских галерах» дали пристанище; с января 1445 по декабрь 1447 (полугодие 2–6)',
+  thoisy4: 'если в «Бургундских галерах» дали пристанище; с января 1445 по декабрь 1447 (полугодие 2–6)',
   morea100: 'Морея впервые достигла 100, обязательно'
 };
 
@@ -909,7 +933,10 @@ function startTurn(s) {
         s.flags[key] = true;
         if (lvl === 100) s.flags[pair[0] + 'Max'] = true; // постоянный бонус к штурму
         var left = ALLIES[pair[0]].filter(function (id) { return !s.used[id]; });
-        if (left.length) { var id = left[Math.floor(r() * left.length)]; s.queue.push(id); s.used[id] = true; }
+        if (left.length) {
+          var id = (pair[0] === 'west' && s.flags.burgundyFriend && left.indexOf('burgundy') >= 0) ? 'burgundy' : left[Math.floor(r() * left.length)];
+          s.queue.push(id); s.used[id] = true;
+        }
       }
     });
   });
@@ -1017,7 +1044,7 @@ function siegeScore(s) {
   var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) - 65;
   var naval = s.west * 0.8 + (f.chain ? 20 : 0) + (f.venFleet ? 15 : 0) + (f.loredanHarbor ? 10 : 0) + (f.cretans ? 8 : 0) - 62;
   var mines = s.garrison / 100 + (f.grant ? (f.halfR ? 12 : 25) : 0) - 82;
-  var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? (f.halfG ? 10 : 20) : 0) + (f.hosp ? 6 : 0) + (f.orhanTurks ? 4 : 0) + (f.toledo ? 3 : 0) + (f.westMax ? 5 : 0) + (f.unityMax ? 5 : 0)
+  var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? (f.halfG ? 10 : 20) : 0) + (f.hosp ? 6 : 0) + (f.burgundians ? 5 : 0) + (f.orhanTurks ? 4 : 0) + (f.toledo ? 3 : 0) + (f.westMax ? 5 : 0) + (f.unityMax ? 5 : 0)
     - Math.max(s.threat, 50) * 0.8 - 110;
   return { bombard: bombard, naval: naval, mines: mines, assault: assault };
 }
@@ -1294,6 +1321,146 @@ function chips(eff) {
   return h ? '<div class="chips">' + h + '</div>' : '';
 }
 
+// ---------- Картинки событий: сцены в стиле мозаики, нарисованные кодом (SVG) ----------
+// Эскиз: потом любую сцену можно заменить настоящей картинкой — см. SCENE_OF ниже.
+var SC = { gold: '#d8b45a', light: '#f0d78c', dark: '#0d0712', mid: '#2a1638', fire: '#e0703a' };
+function rep(n, f) { var o = ''; for (var i = 0; i < n; i++) o += f(i); return o; }
+function crenels(x, y, w, step) { return rep(Math.floor(w / step), function (i) { return '<rect x="' + (x + i * step) + '" y="' + (y - 8) + '" width="' + (step / 2) + '" height="8"/>'; }); }
+function moon(x, y) { return '<circle cx="' + x + '" cy="' + y + '" r="16" fill="' + SC.light + '" opacity=".85"/><circle cx="' + (x + 7) + '" cy="' + (y - 4) + '" r="14" fill="#2b1340"/>'; }
+function stars(n, seed) { return rep(n, function (i) { var x = (i * 97 + seed * 31) % 590 + 5, y = (i * 53 + seed * 17) % 70 + 8; return '<circle cx="' + x + '" cy="' + y + '" r="1.3" fill="' + SC.light + '" opacity=".6"/>'; }); }
+function galley(x, y, k, flag) {
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')">' +
+    '<path d="M-70 0 Q0 22 75 0 L65 -8 L-60 -8 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.5"/>' +
+    rep(9, function (i) { return '<line x1="' + (-50 + i * 12) + '" y1="4" x2="' + (-58 + i * 12) + '" y2="20" stroke="' + SC.gold + '" stroke-width="1"/>'; }) +
+    '<line x1="0" y1="-8" x2="0" y2="-62" stroke="' + SC.gold + '" stroke-width="2"/>' +
+    '<path d="M2 -60 L40 -14 L2 -14 Z" fill="' + SC.gold + '" opacity=".85"/>' +
+    (flag === 'cross' ? '<path d="M0 -62 l18 4 l-18 4 z" fill="' + SC.light + '"/>' : flag === 'moon' ? '<path d="M0 -62 l18 4 l-18 4 z" fill="#b83a3a"/>' : '') + '</g>';
+}
+function soldier(x, y, k) {
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2">' +
+    '<circle cx="0" cy="-34" r="6"/><path d="M-8 -26 L8 -26 L10 0 L-10 0 Z"/><line x1="12" y1="6" x2="12" y2="-60"/>' +
+    '<path d="M12 -60 l-3 8 l6 0 z" fill="' + SC.gold + '"/><ellipse cx="-9" cy="-14" rx="6" ry="9"/></g>';
+}
+function banner(x, y, kind) {
+  return '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + (y - 70) + '" stroke="' + SC.gold + '" stroke-width="2"/>' +
+    '<path d="M' + x + ' ' + (y - 70) + ' h34 l-8 12 l8 12 h-34 z" fill="' + (kind === 'moon' ? '#8a2a2a' : '#5e2276') + '" stroke="' + SC.gold + '"/>' +
+    (kind === 'moon' ? '<circle cx="' + (x + 13) + '" cy="' + (y - 58) + '" r="5" fill="' + SC.light + '"/><circle cx="' + (x + 15) + '" cy="' + (y - 59) + '" r="4.3" fill="#8a2a2a"/>'
+      : '<path d="M' + (x + 13) + ' ' + (y - 66) + ' v16 M' + (x + 7) + ' ' + (y - 60) + ' h12" stroke="' + SC.light + '" stroke-width="2"/>');
+}
+function house(x, y, w, h) { return '<path d="M' + x + ' ' + y + ' v-' + h + ' l' + (w / 2) + ' -' + (h / 2.5) + ' l' + (w / 2) + ' ' + (h / 2.5) + ' v' + h + ' z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1"/>'; }
+function flame(x, y, k) { return '<path transform="translate(' + x + ' ' + y + ') scale(' + k + ')" d="M0 0 C-14 -10 -6 -26 -2 -38 C2 -26 10 -30 8 -44 C20 -30 18 -10 0 0 Z" fill="' + SC.fire + '" opacity=".85"/>'; }
+
+var SCENES = {
+  walls: function () {
+    var towers = [40, 200, 360, 520];
+    return moon(470, 40) + stars(14, 1) +
+      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.5">' +
+      '<rect x="0" y="110" width="600" height="70"/>' + crenels(0, 110, 600, 16) +
+      towers.map(function (x) { return '<rect x="' + x + '" y="62" width="44" height="118"/>' + crenels(x, 62, 44, 11) +
+        '<rect x="' + (x + 17) + '" y="85" width="10" height="16" fill="' + SC.gold + '" opacity=".7"/>'; }).join('') + '</g>' +
+      '<path d="M0 168 H600" stroke="' + SC.gold + '" stroke-width="1" opacity=".5"/>';
+  },
+  sea: function () {
+    return moon(90, 38) + stars(10, 2) +
+      galley(210, 128, 1.1, 'cross') + galley(430, 112, .75, 'cross') +
+      rep(5, function (i) { var y = 140 + i * 8; return '<path d="M0 ' + y + ' Q 37 ' + (y - 6) + ' 75 ' + y + ' T 150 ' + y + ' T 225 ' + y + ' T 300 ' + y + ' T 375 ' + y + ' T 450 ' + y + ' T 525 ' + y + ' T 600 ' + y + '" fill="none" stroke="' + SC.gold + '" stroke-width="1.2" opacity="' + (0.7 - i * 0.1) + '"/>'; });
+  },
+  army: function () {
+    return stars(10, 3) + '<rect x="0" y="160" width="600" height="20" fill="' + SC.dark + '"/>' +
+      banner(70, 160, 'cross') + banner(520, 160, 'cross') +
+      rep(11, function (i) { return soldier(130 + i * 34, 160, i % 2 ? 1 : 1.08); });
+  },
+  court: function () {
+    return '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.5">' +
+      rep(6, function (i) { var x = 30 + i * 100; return '<path d="M' + x + ' 180 V90 A40 40 0 0 1 ' + (x + 80) + ' 90 V180" fill="none"/><rect x="' + (x - 6) + '" y="80" width="12" height="100"/>'; }) +
+      '<rect x="570" y="80" width="12" height="100"/>' +
+      '<path d="M270 180 V118 H330 V180" /><path d="M262 118 H338 L330 104 H270 Z"/><circle cx="300" cy="92" r="9"/>' +
+      '<path d="M286 84 l5 -9 l9 6 l9 -6 l5 9 z" fill="' + SC.gold + '"/></g>' +
+      '<rect x="0" y="176" width="600" height="4" fill="' + SC.gold + '" opacity=".6"/>';
+  },
+  church: function () {
+    return stars(18, 4) + '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.6">' +
+      '<rect x="150" y="120" width="300" height="60"/>' +
+      '<path d="M190 120 A50 34 0 0 1 290 120 Z"/><path d="M310 120 A50 34 0 0 1 410 120 Z"/>' +
+      '<rect x="220" y="96" width="160" height="24"/><path d="M220 96 A80 64 0 0 1 380 96 Z"/>' +
+      rep(9, function (i) { return '<rect x="' + (234 + i * 15) + '" y="100" width="6" height="12" fill="' + SC.gold + '" opacity=".75"/>'; }) +
+      '</g><path d="M300 30 v-22 M291 18 h18" stroke="' + SC.light + '" stroke-width="3"/>' +
+      rep(6, function (i) { return '<rect x="' + (175 + i * 45) + '" y="140" width="10" height="22" rx="5" fill="' + SC.gold + '" opacity=".6"/>'; });
+  },
+  sultan: function () {
+    return moon(520, 36) + stars(12, 5) + '<rect x="0" y="162" width="600" height="18" fill="' + SC.dark + '"/>' +
+      [[80, 1], [200, 1.4], [330, 1], [450, 1.25]].map(function (t) {
+        var x = t[0], k = t[1];
+        return '<g transform="translate(' + x + ' 162) scale(' + k + ')"><path d="M-40 0 L0 -60 L40 0 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.4"/>' +
+          '<path d="M0 -60 V0" stroke="' + SC.gold + '" stroke-width="1"/><path d="M-8 0 L0 -18 L8 0" fill="' + SC.gold + '" opacity=".5"/></g>';
+      }).join('') + banner(140, 162, 'moon') + banner(560, 162, 'moon') +
+      '<circle cx="390" cy="158" r="5" fill="' + SC.fire + '" opacity=".9"/>';
+  },
+  morea: function () {
+    return '<circle cx="480" cy="46" r="20" fill="' + SC.light + '" opacity=".8"/>' +
+      '<path d="M0 180 L0 120 Q120 60 230 110 T420 100 Q520 70 600 115 V180 Z" fill="' + SC.mid + '" stroke="' + SC.gold + '" stroke-width="1.2"/>' +
+      '<path d="M0 180 V150 Q150 120 300 150 T600 145 V180 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2"><rect x="200" y="72" width="40" height="34"/>' + crenels(200, 72, 40, 10) + '</g>' +
+      house(250, 118, 22, 16) + house(280, 124, 20, 14) + house(168, 120, 22, 16) +
+      '<path d="M90 150 v-26" stroke="' + SC.gold + '" stroke-width="3"/><circle cx="90" cy="118" r="14" fill="' + SC.mid + '" stroke="' + SC.gold + '"/>';
+  },
+  disaster: function () {
+    return '<rect x="0" y="0" width="600" height="180" fill="#3a1418" opacity=".55"/>' +
+      rep(9, function (i) { return house(30 + i * 62, 172, 48 + (i % 3) * 8, 40 + (i % 2) * 18); }) +
+      flame(120, 132, 1.2) + flame(300, 120, 1.6) + flame(470, 128, 1.3) + flame(220, 140, .9) +
+      rep(4, function (i) { return '<circle cx="' + (150 + i * 110) + '" cy="' + (50 - i % 2 * 12) + '" r="' + (22 + i % 2 * 8) + '" fill="#1a0f22" opacity=".7"/>'; });
+  },
+  gold: function () {
+    return stars(10, 6) + '<g stroke="' + SC.dark + '" stroke-width="1">' +
+      [[200, 6], [250, 9], [300, 7], [350, 11], [400, 5]].map(function (c) {
+        return rep(c[1], function (i) { return '<ellipse cx="' + c[0] + '" cy="' + (166 - i * 7) + '" rx="22" ry="6" fill="' + (i % 2 ? SC.gold : SC.light) + '"/>'; });
+      }).join('') + '</g>' +
+      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.5"><rect x="450" y="120" width="90" height="52"/><path d="M450 120 Q495 90 540 120"/>' +
+      '<rect x="488" y="132" width="14" height="16" fill="' + SC.gold + '"/></g>';
+  },
+  letter: function () {
+    return stars(12, 7) + '<g stroke="' + SC.gold + '" stroke-width="1.5">' +
+      '<path d="M160 50 H440 V150 H160 Z" fill="#e8d6a8"/><rect x="146" y="40" width="20" height="120" rx="10" fill="' + SC.mid + '"/><rect x="434" y="40" width="20" height="120" rx="10" fill="' + SC.mid + '"/></g>' +
+      rep(6, function (i) { return '<line x1="190" y1="' + (68 + i * 12) + '" x2="' + (410 - (i % 3) * 30) + '" y2="' + (68 + i * 12) + '" stroke="#5a4630" stroke-width="2" opacity=".55"/>'; }) +
+      '<circle cx="380" cy="132" r="14" fill="#9a2a2a" stroke="' + SC.dark + '"/><path d="M470 150 L540 40" stroke="' + SC.light + '" stroke-width="3"/><path d="M540 40 q10 30 -18 50" fill="none" stroke="' + SC.light + '" stroke-width="2"/>';
+  },
+  cannon: function () {
+    return stars(10, 8) + '<rect x="0" y="160" width="600" height="20" fill="' + SC.dark + '"/>' +
+      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="2"><path d="M140 130 L390 108 L396 152 L146 160 Z"/><rect x="380" y="100" width="30" height="58" rx="4"/>' +
+      '<circle cx="190" cy="164" r="16"/><circle cx="330" cy="164" r="16"/>' + rep(6, function (i) { return '<line x1="' + (170 + i * 36) + '" y1="128" x2="' + (172 + i * 36) + '" y2="158"/>'; }) + '</g>' +
+      '<circle cx="460" cy="110" r="22" fill="#3a2a40" opacity=".8"/><circle cx="500" cy="92" r="28" fill="#3a2a40" opacity=".6"/><circle cx="545" cy="70" r="20" fill="#3a2a40" opacity=".45"/>' +
+      '<circle cx="430" cy="128" r="8" fill="' + SC.fire + '"/>';
+  },
+  battle: function () {
+    return '<rect x="0" y="150" width="600" height="30" fill="' + SC.dark + '"/>' +
+      banner(60, 150, 'cross') + banner(120, 150, 'cross') + banner(480, 150, 'moon') + banner(540, 150, 'moon') +
+      '<g stroke="' + SC.light + '" stroke-width="5" stroke-linecap="round"><line x1="250" y1="40" x2="350" y2="140"/><line x1="350" y1="40" x2="250" y2="140"/></g>' +
+      '<g stroke="' + SC.gold + '" stroke-width="7" stroke-linecap="round"><line x1="262" y1="116" x2="286" y2="140"/><line x1="338" y1="116" x2="314" y2="140"/></g>' +
+      flame(180, 150, .8) + flame(420, 150, .8);
+  }
+};
+// Какое событие какой сценой иллюстрировать (позже сюда можно вписать путь к настоящей картинке)
+var SCENE_OF = {
+  varna: 'battle', hexamilion: 'cannon', kosovo: 'battle', john_death: 'court', murad_death: 'sultan', orhan: 'court', chain: 'sea',
+  rumeli: 'walls', urban: 'cannon', union_procl: 'church', giustiniani: 'sea', grant: 'walls',
+  galata: 'sea', venice_loan: 'gold', athos: 'church', morea_quarrel: 'morea', kastri: 'morea', skanderbeg: 'battle', earthquake: 'disaster',
+  harvest: 'morea', fire: 'disaster', fire2: 'disaster', unpaid: 'army', envoy: 'sultan', pope: 'letter', bride: 'court', catalans: 'army',
+  church_silver: 'gold', notaras: 'sea', hunyadi: 'army', bessarion: 'letter', famine: 'disaster', pirates: 'sea', scholarius: 'church',
+  plethon: 'morea', thoisy: 'sea', thoisy2: 'sea', thoisy3: 'letter', thoisy4: 'sea', theophilos: 'walls', kantakouzenos: 'army',
+  tithe: 'gold', magnates: 'gold', cretans: 'sea', venice_fleet: 'sea', loredan_early: 'sea', hospitallers: 'army', burgundy: 'army',
+  militia: 'army', orhan_turks: 'army', toledo: 'army', morea100: 'morea',
+  // экраны осады и концовок
+  siege: 'cannon', fall: 'disaster', heroic: 'walls', repelled: 'church', alt: 'church', bankrupt: 'gold', revolt: 'disaster', early: 'sultan'
+};
+function sceneSVG(key) {
+  var name = SCENE_OF[key] || key, f = SCENES[name] || SCENES.walls;
+  return '<svg class="scene" viewBox="0 0 600 180" aria-hidden="true" preserveAspectRatio="xMidYMid slice"><defs>' +
+    '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1850"/><stop offset="1" stop-color="#170c20"/></linearGradient>' +
+    '<pattern id="tess" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#fff" opacity=".035"/></pattern></defs>' +
+    '<rect width="600" height="180" fill="url(#sky)"/>' + f() + '<rect width="600" height="180" fill="url(#tess)"/>' +
+    '<rect x="2" y="2" width="596" height="176" fill="none" stroke="#d8b45a" stroke-width="2" opacity=".75"/></svg>';
+}
+
 // ---------- Подсказки к ресурсам ----------
 var TIPS = {
   gold: 'Деньги на указы и решения в событиях. Каждый ход приходит доход (он растёт вместе с Мореей) и уходит жалованье войску. Если долг превысит 25 — банкротство.',
@@ -1511,7 +1678,7 @@ function eventModal() {
   var opts = ev.options(s);
   var h = '<div class="overlay"><div class="modal">' +
     '<div class="kicker">' + (ev.kicker ? '📜 Историческое событие · ' + ev.kicker : (ev.from !== undefined ? '📜 Историческое событие · ' : '⚜ Событие · ') + G.dateOf(s)) + '</div>' +
-    '<h2>' + ev.title + '</h2><p>' + G.evText(ev, s) + '</p>' +
+    '<h2>' + ev.title + '</h2>' + sceneSVG(ev.id) + '<p>' + G.evText(ev, s) + '</p>' +
     (ev.note ? '<div class="note">' + ev.note + '</div>' : '') + '<div class="opts">';
   opts.forEach(function (o, i) {
     var ok = G.optionAvailable(s, o);
@@ -1531,7 +1698,7 @@ function resultModal() {
 
 function siegeModal() {
   var s = S, sg = s.siege, n = s.siegeStep, early = s.flags.earlySiege;
-  var h = '<div class="overlay"><div class="modal"><div class="kicker">' + (early ? 'Досрочная осада · ' + G.dateOf(s) : 'Весна 1453') + '</div><h2>Осада Константинополя</h2>';
+  var h = '<div class="overlay"><div class="modal"><div class="kicker">' + (early ? 'Досрочная осада · ' + G.dateOf(s) : 'Весна 1453') + '</div><h2>Осада Константинополя</h2>' + (n === 0 ? sceneSVG('siege') : '');
   if (n === 0) {
     h += (early
       ? '<p>Угроза достигла предела: Мехмед II не стал ждать весны 1453 года. Его армия внезапно встала у стен, а город не успел подготовиться — это серьёзно ослабит оборону. Вас защищают:</p>'
@@ -1560,8 +1727,7 @@ function siegeModal() {
 function endModal() {
   var s = S, e = G.ENDINGS[s.over.ending];
   return '<div class="overlay"><div class="modal center">' +
-    '<div class="eagle">' + (e.win ? '☩' : '✝') + '</div>' +
-    '<div class="kicker">' + e.kicker + '</div><h2>' + e.title + '</h2>' +
+    '<div class="kicker">' + e.kicker + '</div><h2>' + e.title + '</h2>' + sceneSVG(s.over.ending) +
     '<p style="text-align:left">' + e.text + '</p><div class="note" style="text-align:left">' + e.note + '</div>' +
     '<p style="color:' + (e.win ? 'var(--good)' : 'var(--bad)') + '">' + (e.win ? 'Победа!' : 'Поражение') +
     ' · сложность «' + G.DIFFS[s.diff].name + '»' +
@@ -1698,7 +1864,7 @@ function renderPopup() {
       '<p><b>Обстрел</b> = стены × 0,8 + 15 (Урбан у вас) − 15 (Урбан у султана) − 65</p>' +
       '<p><b>Золотой Рог</b> = Запад × 0,8 + 20 (цепь) + 15 (венецианские галеры) + 10 (Лоредан охраняет гавань) + 8 (критяне) − 62</p>' +
       '<p><b>Подкопы</b> = гарнизон ÷ 100 + 25 (Грант; 12, если опоздал) − 82</p>' +
-      '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (рыцари) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 50) − 110</p>' +
+      '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (иоанниты) + 5 (бургундцы) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 50) − 110</p>' +
       '<p>К каждому этапу добавляется случайность: ±15, у штурма ±20. Этап удался, если вышло 0 или больше. Каждый удачный этап из первых трёх даёт штурму +6.</p>' +
       '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +10 (поправка на округление указов).</p>' +
       '<p>Перед осадой Морея 60+ присылает 500 воинов, Морея 100 — 1000.</p></div>';
