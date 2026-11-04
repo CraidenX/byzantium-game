@@ -156,6 +156,19 @@ details.log summary{cursor:pointer;color:var(--gold2);font-size:17px}
 .fc small{font-size:12.5px}
 .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
 
+/* Летопись по ходам */
+.lg{margin-top:10px}
+.lh{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--gold);font-size:14px;letter-spacing:.08em;
+  border-bottom:1px solid var(--line);padding-bottom:4px}
+.lh .icon-btn{font-size:12.5px;padding:3px 8px;letter-spacing:0}
+.log .lg ul{max-height:none;margin-top:4px}
+.log ul{max-height:none}
+details.log > .lg:first-of-type{margin-top:12px}
+#chronicle{max-height:none}
+.check{display:block;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:4px 0 6px;cursor:pointer}
+.check input{width:18px;height:18px;vertical-align:-3px;margin-right:6px;accent-color:#d8b45a}
+.check small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+
 /* Выбор сложности и вступление */
 .diffs{display:flex;flex-direction:column;gap:8px;margin:10px 0}
 .diff{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left}
@@ -210,6 +223,14 @@ function rnd(s) {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 function rint(s, a, b) { return a + Math.floor(rnd(s) * (b - a + 1)); }
+// Отдельный генератор для каждого хода и случая: на «Реальности» перезапуск хода даёт те же события и тот же исход осады
+function mix(a, b) {
+  var h = (a ^ Math.imul((b + 0x9E3779B9) >>> 0, 0x85EBCA6B)) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x7FEB352D) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x846CA68B) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
+}
+function rngFor(s, salt) { var st = { seed: mix(s.gameSeed >>> 0, salt) }; return function () { return rnd(st); }; }
 
 // ---------- Показатели ----------
 var STATS = {
@@ -259,10 +280,12 @@ function dateLabel(t) {
 function yearOf(t) { return 1444 + Math.floor(t / 2); }
 
 // ---------- Сложность и правители ----------
+// Запасной вариант названий: Легенда / История / Рок
+// rewinds: сколько раз можно вернуться в прошлое (-1 — без ограничений); reroll: при возвращении события перетасовываются
 var DIFFS = {
-  dream:     { name: 'Сон',        icon: '☁️', desc: 'Для знакомства с эпохой: больше золота, султан терпеливее, осада легче.', gold: 15, income: 2, threat: -1, siege: 0 },
-  reality:   { name: 'Реальность', icon: '⚖️', desc: 'Задуманный баланс: победить трудно, но возможно.', gold: 0, income: 0, threat: 0, siege: 0 },
-  nightmare: { name: 'Кошмар',     icon: '🔥', desc: 'Казна пуста, Мехмед нетерпелив. Для тех, кто уже побеждал.', gold: -10, income: -1, threat: 1, siege: 0 }
+  dream:     { name: 'Сон',        icon: '☁️', desc: 'Лёгкий режим: больше золота, султан терпеливее. Можно сколько угодно возвращаться в прошлое — события при этом перетасуются.', gold: 15, income: 2, threat: -1, siege: 0, rewinds: -1, reroll: true },
+  reality:   { name: 'Реальность', icon: '⚖️', desc: 'Задуманный баланс: победить трудно, но возможно. Судьба предрешена: события не меняются, вернуться в прошлое можно лишь дважды.', gold: 0, income: 0, threat: 0, siege: 0, rewinds: 2, reroll: false },
+  nightmare: { name: 'Кошмар',     icon: '🔥', desc: 'Сложный режим: казна пуста, Мехмед нетерпелив. Вернуться в прошлое нельзя.', gold: -10, income: -1, threat: 1, siege: 0, rewinds: 0, reroll: false }
 };
 function D(s) { return DIFFS[s.diff] || DIFFS.reality; }
 
@@ -372,7 +395,7 @@ var HIST = [
     ]; },
     fn: function (s) { s.sultan = 'Мехмед II'; s.flags.mehmed = true; } },
 
-  { id: 'orhan', turn: 15, kicker: 'Осень 1451', title: 'Принц Орхан',
+  { id: 'orhan', from: 15, to: 16, p: 0.6, title: 'Принц Орхан',
     text: 'В Константинополе живёт Орхан — османский принц и возможный претендент на трон. Султан платит за его содержание. Советники предлагают потребовать удвоить выплаты, намекая, что Орхана можно и отпустить…',
     note: 'Так и поступили послы Константина. Великий визирь Халил-паша ответил: «Глупые греки, мне надоели ваши хитрости!» Мехмед получил повод к войне.',
     options: function () { return [
@@ -380,7 +403,7 @@ var HIST = [
       opt('Не дразнить султана', {}, { result: 'Мудрое решение. Мехмед всё равно найдёт повод — но позже.' })
     ]; } },
 
-  { id: 'chain', turn: 15, kicker: 'Осень 1451', title: 'Цепь Золотого Рога',
+  { id: 'chain', from: 12, to: 18, p: 0.4, title: 'Цепь Золотого Рога',
     text: 'Огромная цепь на деревянных поплавках может перекрыть вход в гавань Золотой Рог. Но она проржавела, а поплавки сгнили. Мастера готовы взяться за работу.',
     note: 'В 1453 году турецкий флот так и не прорвал цепь — Мехмед приказал перетащить корабли посуху, на смазанных жиром брёвнах. Без цепи флот вошёл бы в гавань сразу.',
     options: function () { return [
@@ -392,21 +415,21 @@ var HIST = [
     text: 'Мехмед II строит на европейском берегу Босфора, в самом узком месте пролива, мощную крепость. Её пушки перекроют путь кораблям с Чёрного моря — а значит, хлебу и торговле.',
     note: 'Турки называли её «Богаз-кесен» — «Перерезающая горло». Крепость построили всего за четыре с половиной месяца.',
     options: function () { return [
-      opt('Отправить султану протест', { threat: 8, unity: 3, income: -5 }, { result: 'Султан ответил: «Всё, что за стенами города, — моё».' }),
+      opt('Отправить протест султану и известить Запад', { threat: 5, west: 4, income: -5 }, { result: 'Султан ответил: «Всё, что за стенами города, — моё». Зато в Венеции и Риме наконец встревожились.' }),
       opt('Тайно мешать строительству', { gold: -15, threat: 2, income: -2 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Не хватает золота',
         result: 'Подкупленные десятники путают чертежи, обозы с известью «теряются». Крепость построят, но часть кораблей будет прорываться.' }),
-      opt('Арестовать турок в городе', { unity: 6, threat: 12, income: -5 }, { result: 'Константин так и сделал — и через три дня отпустил их. Дипломатия рухнула.' })
+      opt('Арестовать турок в городе', { unity: 7, threat: 5, income: -5 }, { result: 'Константин так и сделал — и через три дня отпустил их. Горожане воспряли духом, султан в гневе.' })
     ]; },
     fn: function (s) { s.flags.rumeli = true; } },
 
-  { id: 'urban', turn: 17, kicker: 'Лето 1452', title: 'Пушечный мастер Урбан',
+  { id: 'urban', from: 16, to: 18, p: 0.8, title: 'Пушечный мастер Урбан',
     text: 'Ко двору явился венгерский литейщик Урбан. Он берётся отлить пушки, способные разбить любые стены, и просит щедрое жалованье.',
     note: 'Константин не смог платить Урбану даже скромное жалованье. Мехмед заплатил вчетверо больше — и получил бомбарду длиной 8 метров, метавшую ядра весом более полутонны.',
     options: function () { return [
       opt('Нанять Урбана на его условиях', { gold: -40 }, { req: function (s) { return s.gold >= 40; }, reqText: 'Не хватает золота',
         fn: function (s) { s.flags.urbanHired = true; return 'Урбан остаётся в городе. Его пушки встанут на стенах, а не против них.'; } }),
       opt('Поторговаться', { gold: -20 }, { req: function (s) { return s.gold >= 20; }, reqText: 'Не хватает золота',
-        fn: function (s) { if (rnd(s) < 0.4) { s.flags.urbanHired = true; return 'Урбан поворчал, но согласился!'; } s.flags.urbanOttoman = true; s.gold += 10; return 'Урбан взял половину задатка и сбежал к султану.'; } }),
+        fn: function (s) { if (rngFor(s, s.t * 100 + 7)() < 0.4) { s.flags.urbanHired = true; return 'Урбан поворчал, но согласился!'; } s.flags.urbanOttoman = true; s.gold += 10; return 'Урбан взял половину задатка и сбежал к султану.'; } }),
       opt('Отказать: казна не выдержит', {}, { fn: function (s) { s.flags.urbanOttoman = true; return 'Урбан уехал в Адрианополь. Скоро он отольёт для Мехмеда чудовищную пушку.'; } })
     ]; } },
 
@@ -419,7 +442,7 @@ var HIST = [
       opt('Отказаться от унии', { west: -20, unity: 12 }, { result: 'Кардинал Исидор увёл лучников обратно на корабли.' })
     ]; } },
 
-  { id: 'giustiniani', turn: 18, kicker: 'Январь 1453', title: 'Джованни Джустиниани',
+  { id: 'giustiniani', from: 17, to: 18, p: 0.5, title: 'Джованни Джустиниани',
     text: function (s) {
       if (s.west >= 50) return 'В гавань вошли две генуэзские галеры. Знаменитый кондотьер Джованни Джустиниани Лонго привёл 700 отборных латников — за свой счёт, ради славы.';
       if (s.west >= 30) return 'Генуэзский кондотьер Джованни Джустиниани Лонго готов прийти на помощь с 700 воинами, но просит денег на снаряжение галер.';
@@ -435,7 +458,7 @@ var HIST = [
       return [opt('Увы…', {})];
     } },
 
-  { id: 'grant', turn: 18, kicker: 'Январь 1453', title: 'Инженер Иоганн Грант',
+  { id: 'grant', from: 16, to: 18, p: 0.4, title: 'Инженер Иоганн Грант',
     text: function (s) {
       return s.flags.giustiniani
         ? 'В отряде Джустиниани служит инженер Иоганн Грант — мастер подземной войны. Он готов обучить ваших людей вести контрподкопы за скромную плату.'
@@ -625,40 +648,87 @@ function eventById(id) {
 function evText(ev, s) { return typeof ev.text === 'function' ? ev.text(s) : ev.text; }
 
 // ---------- Ход игры ----------
-function newGame(seed, diff) {
+var SHUFFLE = [
+  { k: 'walls',    v: 15,  plus: 'стены крепче',          minus: 'стены слабее' },
+  { k: 'garrison', v: 800, plus: 'войска больше',         minus: 'войска меньше' },
+  { k: 'west',     v: 12,  plus: 'Запад благосклоннее',   minus: 'Запад холоднее' },
+  { k: 'unity',    v: 12,  plus: 'горожане дружнее',      minus: 'горожане злее' },
+  { k: 'threat',   v: -10, plus: 'султан спокойнее',      minus: 'султан злее' },
+  { k: 'morea',    v: 15,  plus: 'Морея сильнее',         minus: 'Морея слабее' },
+  { k: 'gold',     v: 20,  plus: 'казна полнее',          minus: 'казна беднее' }
+];
+function shuffleStart(s) {
+  var r = rngFor(s, 777), pool = SHUFFLE.slice(), pick = [];
+  for (var i = 0; i < 4; i++) pick.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+  var eff = {};
+  pick.forEach(function (x, i) { eff[x.k] = i < 2 ? x.v : -x.v; });
+  applyEff(s, eff);
+  s.setupNote = 'Расклад сил: ' + pick[0].plus + ' и ' + pick[1].plus + ', но ' + pick[2].minus + ' и ' + pick[3].minus + '.';
+}
+
+function snap(s) { var h = s.history; s.history = null; var j = JSON.stringify(s); s.history = h; return j; }
+function rewindsLeft(s) { var d = D(s); return d.rewinds < 0 ? Infinity : Math.max(0, d.rewinds - s.rewindsUsed); }
+function canRewind(s) { return rewindsLeft(s) > 0; }
+function rewind(s, t) {
+  if (!canRewind(s) || !s.history[t]) return s;
+  var n = JSON.parse(s.history[t]);
+  n.history = s.history.slice(0, t + 1);
+  n.rewindsUsed = s.rewindsUsed + 1;
+  if (D(n).reroll) n.gameSeed = Math.floor(Math.random() * 4294967296) >>> 0;
+  log(n, '<b>↺ Возвращение в прошлое.</b> ' + (D(n).reroll ? 'Судьба перетасована.' : 'Судьба осталась прежней.'));
+  startTurn(n);
+  return n;
+}
+
+function newGame(seed, diff, shuffle) {
   diff = DIFFS[diff] ? diff : 'reality';
   var s = {
-    v: 2, diff: diff, hideEvent: false, seed: (seed === undefined || seed === null ? Math.floor(Math.random() * 4294967296) : seed) >>> 0,
+    v: 3, diff: diff, hideEvent: false, seed: (seed === undefined || seed === null ? Math.floor(Math.random() * 4294967296) : seed) >>> 0,
+    history: [], rewindsUsed: 0, setupNote: null,
     t: 0, gold: 40 + DIFFS[diff].gold, walls: 45, garrison: 4000, west: 25, unity: 60, threat: 25, morea: 40, incomeMod: 0,
     ruler: 'Иоанн VIII', sultan: 'Мурад II',
-    flags: {}, used: {}, recent: [], queue: [], phase: 'events', chosen: [], log: [],
+    flags: {}, used: {}, queue: [], phase: 'events', chosen: [], log: [],
     lastResult: null, report: null, prev: null, over: null, siege: null, siegeStep: 0
   };
+  s.gameSeed = s.seed;
+  if (shuffle) shuffleStart(s);
+  s.history.push(snap(s));
   startTurn(s);
   return s;
 }
 
 function snapshot(s) { return { gold: s.gold, walls: s.walls, garrison: s.garrison, west: s.west, unity: s.unity, threat: s.threat, morea: s.morea }; }
 
-function log(s, text) { s.log.unshift({ d: dateLabel(s.t), text: text }); if (s.log.length > 80) s.log.length = 80; }
+function log(s, text) { s.log.unshift({ t: s.t, d: dateLabel(s.t), text: text }); if (s.log.length > 80) s.log.length = 80; }
 
-function pickRandomEvent(s) {
-  var pool = RANDOM.filter(function (e) {
-    if (!e.rep && s.used[e.id]) return false;
-    if (s.recent.indexOf(e.id) >= 0) return false;
-    return !e.cond || e.cond(s);
-  });
+var MAX_EVENTS = 2; // больше двух событий за ход — только если сюжетное событие не может ждать
+
+function pickRandomEvent(s, r) {
+  var pool = RANDOM.filter(function (e) { return !s.used[e.id] && (!e.cond || e.cond(s)); });
+  if (!pool.length) return null;
   var total = 0; pool.forEach(function (e) { total += e.w; });
-  var r = rnd(s) * total;
-  for (var i = 0; i < pool.length; i++) { r -= pool[i].w; if (r <= 0) return pool[i]; }
+  var x = r() * total;
+  for (var i = 0; i < pool.length; i++) { x -= pool[i].w; if (x <= 0) return pool[i]; }
   return pool[pool.length - 1];
 }
 
 function startTurn(s) {
+  var r = rngFor(s, s.t * 100 + 1);
   s.queue = [];
+  // 1) события с точной датой
   HIST.forEach(function (e) { if (e.turn === s.t) s.queue.push(e.id); });
-  var r = s.t > 0 ? pickRandomEvent(s) : null; // первый ход — без событий, чтобы осмотреться
-  if (r) { s.queue.push(r.id); s.used[r.id] = true; s.recent.push(r.id); if (s.recent.length > 4) s.recent.shift(); }
+  // 2) сюжетные события с «окном» лет: приходят в случайный ход окна, в последний ход окна — обязательно
+  HIST.forEach(function (e) {
+    if (e.from === undefined || s.used[e.id] || s.t < e.from || s.t > e.to) return;
+    var forced = s.t >= e.to;
+    var roll = r();
+    if (forced || (s.queue.length < MAX_EVENTS && roll < e.p)) { s.queue.push(e.id); s.used[e.id] = true; }
+  });
+  // 3) случайное событие, если есть место (в первый ход — нет)
+  if (s.t > 0 && s.queue.length < MAX_EVENTS) {
+    var ev = pickRandomEvent(s, r);
+    if (ev) { s.queue.push(ev.id); s.used[ev.id] = true; }
+  }
   s.chosen = [];
   s.hideEvent = false;
   s.phase = s.queue.length ? 'events' : 'actions';
@@ -737,6 +807,7 @@ function endTurn(s) {
 
   if (s.t >= LAST_TURN) { beginSiege(s); return; }
   s.t += 1;
+  s.history.push(snap(s));
   startTurn(s);
 }
 
@@ -748,7 +819,7 @@ function siegeScore(s) {
   var naval = s.west * 0.8 + (f.chain ? 20 : 0) - 62;
   var mines = s.garrison / 100 + (f.grant ? 25 : 0) - 82;
   var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? 20 : 0)
-    - Math.max(s.threat, 50) * 0.8 - 88;
+    - Math.max(s.threat, 50) * 0.8 - 90;
   return { bombard: bombard, naval: naval, mines: mines, assault: assault };
 }
 
@@ -756,7 +827,8 @@ function beginSiege(s) {
   var f = s.flags;
   if (s.morea >= 60) { s.garrison += 500; f.moreaHelp = true; }
   var base = siegeScore(s);
-  var r = function (a) { return rint(s, -a, a); };
+  var sr = rngFor(s, 999983);
+  var r = function (a) { return -a + Math.floor(sr() * (2 * a + 1)); };
   var m1 = base.bombard + r(15), m2 = base.naval + r(15), m3 = base.mines + r(15);
   var okCount = (m1 >= 0) + (m2 >= 0) + (m3 >= 0);
   var m4 = base.assault + okCount * 6 + r(20);
@@ -844,6 +916,7 @@ var ENDINGS = {
 root.Game = {
   LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
+  rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind,
   newGame: newGame, dateLabel: dateLabel, yearOf: yearOf, income: income, upkeep: upkeep, threatGrowth: threatGrowth,
   describeEff: describeEff, applyEff: applyEff, currentEvent: currentEvent, evText: evText, optionAvailable: optionAvailable,
   resolveEvent: resolveEvent, toggleAction: toggleAction, canChoose: canChoose, chosenCost: chosenCost,
@@ -858,18 +931,20 @@ root.Game = {
 (function () {
 'use strict';
 var G = window.Game;
-var SAVE_KEY = 'constantinople-save-v2';
+var SAVE_KEY = 'constantinople-save-v3';
 var SOUND_KEY = 'constantinople-sound';
 var app = document.getElementById('app');
 var S = null;          // текущая партия
 var view = 'title';    // title | setup | intro | game
 var introPage = 0;
 var pendingDiff = 'reality';
+var pendingShuffle = false;
+var rewindTarget = null;
 var popup = null;      // help | menu | confirm-new | null
 
 function save() { try { if (S) localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
 function load() {
-  try { var j = localStorage.getItem(SAVE_KEY); var s = j ? JSON.parse(j) : null; return s && s.v === 2 ? s : null; }
+  try { var j = localStorage.getItem(SAVE_KEY); var s = j ? JSON.parse(j) : null; return s && s.v === 3 ? s : null; }
   catch (e) { return null; }
 }
 
@@ -955,7 +1030,8 @@ function renderTitle() {
 }
 
 function renderSetup() {
-  var h = '<div class="kicker">Новая игра</div><h2>Выберите сложность</h2><div class="diffs">';
+  var h = '<div class="kicker">Новая игра</div><h2>Выберите сложность</h2>' + '<label class="check"><input type="checkbox" id="shuffle" ' + (pendingShuffle ? 'checked' : '') + '> 🎲 Случайная расстановка сил' +
+    '<small>Ресурсы на старте перераспределятся: например, войска больше, но стены слабее. Работает на любой сложности.</small></label>' + '<div class="diffs">';
   ['dream', 'reality', 'nightmare'].forEach(function (k) {
     var d = G.DIFFS[k];
     h += '<button class="diff ' + (k === 'reality' ? 'main' : '') + '" data-diff="' + k + '"><span class="t">' + d.icon + ' ' + d.name +
@@ -1055,7 +1131,8 @@ function renderGame() {
       '</b>, стены обветшали на <b>' + r.decay + '</b>, угроза выросла на <b>' + r.tg + '</b>.' +
       (r.notes.length ? '<br>' + r.notes.join('<br>') : '') + '</div>';
   } else if (s.t === 0 && !done) {
-    h += '<div class="panel report">Первое полугодие спокойно: осмотритесь, изучите ресурсы (наведите курсор или нажмите на карточку) и издайте первые указы.</div>';
+    h += '<div class="panel report">Первое полугодие спокойно: осмотритесь, изучите ресурсы (наведите курсор или нажмите на карточку) и издайте первые указы.' +
+      (s.setupNote ? '<br>🎲 <b>' + s.setupNote + '</b>' : '') + '</div>';
   }
 
   // Указы
@@ -1071,9 +1148,23 @@ function renderGame() {
   h += '</div></div>';
 
   // Летопись
-  h += '<details class="log panel" ' + (done ? 'open' : '') + '><summary>📖 Летопись</summary><ul>';
-  s.log.forEach(function (l) { h += '<li><b>' + l.d + ':</b> ' + l.text + '</li>'; });
-  h += '</ul></details></div>';
+  var left = G.rewindsLeft(s);
+  h += '<details class="log panel" id="chronicle" ' + (done || s.openLog ? 'open' : '') + '><summary>📖 Летопись' +
+    (left > 0 ? ' <small style="color:var(--muted);font-size:13px">· можно вернуться в прошлое: ' + (left === Infinity ? 'без ограничений' : 'осталось ' + left) + '</small>' : '') + '</summary>';
+  var groups = [], cur = null;
+  s.log.forEach(function (l) {
+    var key = l.t === undefined ? l.d : l.t;
+    if (!cur || cur.key !== key) { cur = { key: key, t: l.t, d: l.d, items: [] }; groups.push(cur); }
+    cur.items.push(l.text);
+  });
+  groups.forEach(function (g) {
+    var can = left > 0 && g.t !== undefined && s.history && s.history[g.t];
+    h += '<div class="lg"><div class="lh"><span>' + g.d.toUpperCase() + '</span>' +
+      (can ? '<button class="icon-btn" data-rewind="' + g.t + '">↺ вернуться сюда</button>' : '') + '</div><ul>';
+    g.items.forEach(function (t) { h += '<li>' + t + '</li>'; });
+    h += '</ul></div>';
+  });
+  h += '</details></div>';
 
   // Нижняя панель: прогноз казны
   if (done) {
@@ -1113,7 +1204,7 @@ function eventModal() {
   if (!ev) return '';
   var opts = ev.options(s);
   var h = '<div class="overlay"><div class="modal">' +
-    '<div class="kicker">' + (ev.kicker ? '📜 Историческое событие · ' + ev.kicker : '⚜ Событие · ' + G.dateLabel(s.t)) + '</div>' +
+    '<div class="kicker">' + (ev.kicker ? '📜 Историческое событие · ' + ev.kicker : (ev.from !== undefined ? '📜 Историческое событие · ' : '⚜ Событие · ') + G.dateLabel(s.t)) + '</div>' +
     '<h2>' + ev.title + '</h2><p>' + G.evText(ev, s) + '</p>' +
     (ev.note ? '<div class="note">' + ev.note + '</div>' : '') + '<div class="opts">';
   opts.forEach(function (o, i) {
@@ -1169,7 +1260,8 @@ function endModal() {
     '<p style="color:' + (e.win ? 'var(--good)' : 'var(--bad)') + '">' + (e.win ? 'Победа!' : 'Поражение') +
     ' · сложность «' + G.DIFFS[s.diff].name + '»' +
     (s.siege ? ' · итог осады: ' + (s.siege.total > 0 ? '+' : '') + s.siege.total : ' · ' + G.dateLabel(s.t)) + '</p>' +
-    '<div class="row"><button class="btn" data-a="setup">Сыграть ещё раз</button><button class="btn ghost" data-a="close-end">Посмотреть летопись</button></div></div></div>';
+    '<div class="row"><button class="btn" data-a="setup">Сыграть ещё раз</button>' +
+    (G.canRewind(s) ? '<button class="btn ghost" data-a="open-log">↺ Вернуться в прошлое</button>' : '<button class="btn ghost" data-a="close-end">Посмотреть летопись</button>') + '</div></div></div>';
 }
 
 function renderPopup() {
@@ -1184,6 +1276,7 @@ function renderPopup() {
       '<p><b>Поражение раньше срока:</b> долг больше 25 — банкротство; единство 0 — бунт; угроза 100 — султан нападёт немедленно (до воцарения Мехмеда II это сразу поражение, после — досрочная осада, к которой город не готов).</p>' +
       '<p><b>Осада</b> пройдёт в четыре этапа. Важно всё: стены, гарнизон, помощь Запада, единство, а также особые решения — пушкарь Урбан, цепь Золотого Рога, инженер Грант и кондотьер Джустиниани. Сильная Морея пришлёт подкрепление.</p>' +
       '<p><b>Правители различаются:</b> Иоанн VIII — дипломат, Константин XI — воин; Мурад II осторожен, Мехмед II — завоеватель.</p>' +
+      '<p><b>Возвращение в прошлое:</b> в летописи у каждого хода есть кнопка «вернуться сюда». На «Сне» — без ограничений, и события перетасовываются; на «Реальности» — два раза, судьба не меняется; на «Кошмаре» — нельзя.</p>' +
       '<p style="color:var(--muted);font-size:14px">Игра сохраняется автоматически в этом браузере.</p>' +
       '<div class="row"><button class="btn" data-a="close-popup">Понятно</button></div></div></div>';
   }
@@ -1196,6 +1289,14 @@ function renderPopup() {
       '<button class="btn ghost" data-a="confirm-new">Начать заново</button>' +
       '<button class="btn ghost" data-a="to-title">На главный экран</button>' +
       '</div></div></div>';
+  }
+  if (popup === 'rewind' && rewindTarget !== null) {
+    var lft = G.rewindsLeft(S), rr = G.DIFFS[S.diff].reroll;
+    return '<div class="overlay"><div class="modal center"><div class="kicker">↺ Возвращение в прошлое</div><h2>Вернуться в ' + G.dateLabel(rewindTarget) + '?</h2>' +
+      '<p>Игра вернётся к началу этого хода. Всё, что случилось после, будет забыто.</p>' +
+      '<p style="color:var(--muted);font-size:14px">' + (rr ? 'На «Сне» события при этом перетасуются — судьба может сложиться иначе.' : 'На «Реальности» судьба предрешена: те же события и та же удача в осаде — изменить можно лишь свои решения.') +
+      ' ' + (lft === Infinity ? 'Возвращения не ограничены.' : 'После этого останется возвращений: ' + (lft - 1) + '.') + '</p>' +
+      '<div class="row"><button class="btn" data-a="do-rewind">Вернуться</button><button class="btn ghost" data-a="close-popup">Отмена</button></div></div></div>';
   }
   if (popup === 'confirm-new') {
     return '<div class="overlay"><div class="modal center"><h2>Начать заново?</h2><p>Текущая партия будет потеряна.</p>' +
@@ -1220,6 +1321,9 @@ function afterChange(before) {
 }
 
 // ---------- Обработка нажатий ----------
+app.addEventListener('toggle', function (e) {
+  if (e.target.id === 'chronicle' && S) { S.openLog = e.target.open; save(); }
+}, true);
 app.addEventListener('click', function (e) {
   var stat = e.target.closest('.stat');
   var opened = app.querySelectorAll('.stat.open');
@@ -1230,15 +1334,16 @@ app.addEventListener('click', function (e) {
   if (!b || b.disabled) return;
   var a = b.getAttribute('data-a');
   var before = S ? S.phase : null;
+  if (b.hasAttribute('data-rewind')) { rewindTarget = +b.getAttribute('data-rewind'); popup = 'rewind'; Sound.click(); render(); return; }
   if (b.hasAttribute('data-act')) { G.toggleAction(S, b.getAttribute('data-act')); Sound.select(); save(); render(); return; }
   if (b.hasAttribute('data-opt')) { G.resolveEvent(S, +b.getAttribute('data-opt')); Sound.click(); save(); render(); return; }
-  if (b.hasAttribute('data-diff')) { pendingDiff = b.getAttribute('data-diff'); introPage = 0; view = 'intro'; Sound.click(); render(); return; }
+  if (b.hasAttribute('data-diff')) { var cb = document.getElementById('shuffle'); pendingShuffle = !!(cb && cb.checked); pendingDiff = b.getAttribute('data-diff'); introPage = 0; view = 'intro'; Sound.click(); render(); return; }
   Sound.click();
   switch (a) {
     case 'setup': popup = null; view = 'setup'; break;
     case 'continue': S = load(); view = S ? 'game' : 'title'; if (S) afterChange(null); break;
     case 'intro-next': if (introPage < INTRO.length - 1) { introPage++; break; } /* falls through */
-    case 'intro-skip': S = G.newGame(null, pendingDiff); view = 'game'; save(); Sound.turn(); break;
+    case 'intro-skip': S = G.newGame(null, pendingDiff, pendingShuffle); view = 'game'; save(); Sound.turn(); break;
     case 'intro-back': introPage = Math.max(0, introPage - 1); break;
     case 'help': popup = 'help'; break;
     case 'menu': popup = 'menu'; break;
@@ -1258,6 +1363,8 @@ app.addEventListener('click', function (e) {
       else { G.siegeDone(S); afterChange(before); }
       save(); break;
     case 'close-end': S.phase = 'done'; save(); break;
+    case 'open-log': S.phase = 'done'; S.openLog = true; save(); render(); var c = document.getElementById('chronicle'); if (c) c.scrollIntoView(); return;
+    case 'do-rewind': popup = null; S = G.rewind(S, rewindTarget); rewindTarget = null; save(); Sound.turn(); window.scrollTo(0, 0); afterChange(null); break;
   }
   render();
 });
