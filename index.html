@@ -156,6 +156,15 @@ details.log summary{cursor:pointer;color:var(--gold2);font-size:17px}
 .fc small{font-size:12.5px}
 .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
 
+/* Панель кнопок, зал, разработчик */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar .btn{padding:7px 12px;font-size:15px}
+.hint{display:block;font-size:12.5px;color:var(--muted);margin-top:4px}
+.hall{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:6px}
+.hall .opt{padding:8px 10px}
+.hall .opt .t{margin:0;font-size:15px}
+.sel{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:inherit;max-width:100%}
+
 /* Летопись по ходам */
 .lg{margin-top:10px}
 .lh{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--gold);font-size:14px;letter-spacing:.08em;
@@ -400,7 +409,7 @@ var HIST = [
     note: 'Так и поступили послы Константина. Великий визирь Халил-паша ответил: «Глупые греки, мне надоели ваши хитрости!» Мехмед получил повод к войне.',
     options: function () { return [
       opt('Потребовать больше денег', { gold: 12, threat: 12 }, { result: 'Деньги пришли. Вместе с ними — ледяное письмо султана.' }),
-      opt('Не дразнить султана', {}, { result: 'Мудрое решение. Мехмед всё равно найдёт повод — но позже.' })
+      opt('Не дразнить султана', { unity: 3 }, { result: 'Горожане вздохнули с облегчением. Мехмед всё равно найдёт повод, но позже.' })
     ]; } },
 
   { id: 'chain', from: 12, to: 18, p: 0.4, title: 'Цепь Золотого Рога',
@@ -425,13 +434,24 @@ var HIST = [
   { id: 'urban', from: 16, to: 18, p: 0.8, title: 'Пушечный мастер Урбан',
     text: 'Ко двору явился венгерский литейщик Урбан. Он берётся отлить пушки, способные разбить любые стены, и просит щедрое жалованье.',
     note: 'Константин не смог платить Урбану даже скромное жалованье. Мехмед заплатил вчетверо больше — и получил бомбарду длиной 8 метров, метавшую ядра весом более полутонны.',
-    options: function () { return [
-      opt('Нанять Урбана на его условиях', { gold: -40 }, { req: function (s) { return s.gold >= 40; }, reqText: 'Не хватает золота',
-        fn: function (s) { s.flags.urbanHired = true; return 'Урбан остаётся в городе. Его пушки встанут на стенах, а не против них.'; } }),
-      opt('Поторговаться', { gold: -20 }, { req: function (s) { return s.gold >= 20; }, reqText: 'Не хватает золота',
-        fn: function (s) { if (rngFor(s, s.t * 100 + 7)() < 0.4) { s.flags.urbanHired = true; return 'Урбан поворчал, но согласился!'; } s.flags.urbanOttoman = true; s.gold += 10; return 'Урбан взял половину задатка и сбежал к султану.'; } }),
-      opt('Отказать: казна не выдержит', {}, { fn: function (s) { s.flags.urbanOttoman = true; return 'Урбан уехал в Адрианополь. Скоро он отольёт для Мехмеда чудовищную пушку.'; } })
-    ]; } },
+    options: function (s) {
+      var refuse = opt('Отказать', {}, { fn: function (s) { s.flags.urbanOttoman = true; return 'Урбан уехал в Адрианополь. Скоро он отольёт для Мехмеда чудовищную пушку.'; } });
+      var hire = function (price) {
+        return opt('Нанять Урбана', { gold: -price }, { req: function (s) { return s.gold >= price; }, reqText: 'Не хватает золота',
+          fn: function (s) { s.flags.urbanHired = true; return 'Урбан остаётся в городе. Его пушки встанут на стенах, а не против них.'; } });
+      };
+      if (s.diff === 'dream') return [hire(20), refuse];
+      var list = [hire(40)];
+      if (s.diff === 'reality') {
+        var ch = urbanChance(s);
+        list.push(opt('Поторговаться', { gold: -20 }, { req: function (s) { return s.gold >= 20; }, reqText: 'Не хватает золота',
+          hint: 'Шанс, что Урбан согласится: ' + ch + '%. Наёмник охотнее остаётся там, где горожане едины и есть надежда на Запад.',
+          fn: function (s) { if (rngFor(s, s.t * 100 + 7)() * 100 < urbanChance(s)) { s.flags.urbanHired = true; return 'Урбан поворчал, но согласился.'; }
+            s.flags.urbanOttoman = true; s.gold += 10; return 'Урбан взял половину задатка и уехал к султану.'; } }));
+      }
+      list.push(refuse);
+      return list;
+    } },
 
   { id: 'union_procl', turn: 17, kicker: '12 декабря 1452', title: 'Уния в Святой Софии',
     text: 'В город прибыл папский легат кардинал Исидор с двумя сотнями лучников. Он требует торжественно провозгласить унию церквей в Святой Софии. Толпа у монастыря Пантократора кричит: «Не нужна нам помощь латинян!»',
@@ -640,7 +660,77 @@ var RANDOM = [
     ]; } }
 ];
 
+// Союзники за высокую помощь Запада и единство (приходят при 75 и при 100)
+var ALLIES = {
+  west: ['cretans', 'loredan', 'hospitallers'],
+  unity: ['militia', 'orhan_turks', 'toledo']
+};
+var ALLY_EVENTS = [
+  { id: 'cretans', ally: true, title: 'Критские моряки',
+    text: 'В гавань вошли три корабля с Крита. Моряки сказали, что пришли сами: на Крите помнят, чей это город.',
+    note: 'Критяне в 1453 году держали башни у Золотого Рога и сдались последними — Мехмед, восхищённый их стойкостью, отпустил их домой с кораблями.',
+    options: function () { return [
+      opt('Поставить их на морские стены', { garrison: 300 }, { fn: function (s) { s.flags.cretans = true; } })
+    ]; } },
+  { id: 'loredan', ally: true, title: 'Флот Лоредана',
+    text: 'Венеция решилась: адмирал Джакомо Лоредан готов привести галеры к городу. Но сенат, как всегда, просит кое-что взамен — торговые льготы.',
+    note: 'Флот Лоредана действительно вышел к Константинополю весной 1453 года. Он опоздал: город пал раньше, чем галеры добрались до Дарданелл.',
+    options: function () { return [
+      opt('Дать Венеции льготы', { income: -2, west: 3 }, { fn: function (s) { s.flags.venFleet = true; }, result: 'Галеры Лоредана придут к весне. В этот раз — вовремя.' }),
+      opt('Отказаться', { west: -5 })
+    ]; } },
+  { id: 'hospitallers', ally: true, title: 'Рыцари с Родоса',
+    text: 'Великий магистр иоаннитов Жан де Ластик прислал отряд рыцарей и сержантов. Орден помнит, что держится на Родосе только пока стоит Константинополь.',
+    note: 'В реальности орден ограничился деньгами и обещаниями. Через 70 лет, в 1522 году, турки взяли и Родос.',
+    options: function () { return [
+      opt('Принять рыцарей', { garrison: 400, unity: -2 }, { fn: function (s) { s.flags.hosp = true; } })
+    ]; } },
+  { id: 'militia', ally: true, title: 'Городское ополчение',
+    text: 'После проповеди в храме Святых Апостолов к дворцу пришли сотни горожан: ремесленники, лавочники, даже монахи. Просят оружия.',
+    note: 'В 1453 году на стенах стояло около пяти тысяч греков, большинство — горожане и монахи, а не профессиональные воины.',
+    options: function () { return [
+      opt('Вооружить как следует', { gold: -10, garrison: 800 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
+      opt('Раздать копья из арсенала', { garrison: 400 })
+    ]; } },
+  { id: 'orhan_turks', ally: true, title: 'Турки Орхана',
+    text: 'Принц Орхан собрал своих людей — несколько сотен турок, которым нет пощады от Мехмеда. Они готовы драться за город.',
+    note: 'Отряд Орхана оборонял морские стены у гавани Феодосия. Когда город пал, Орхан пытался бежать в монашеской рясе, но его узнали.',
+    options: function () { return [
+      opt('Принять их', { garrison: 300, unity: -2 }, { fn: function (s) { s.flags.orhanTurks = true; } }),
+      opt('Отказать: турок на стенах не будет', { unity: 3 })
+    ]; } },
+  { id: 'toledo', ally: true, title: 'Франсиско де Толедо',
+    text: 'Кастильский рыцарь дон Франсиско де Толедо приехал с несколькими спутниками. Говорит, что он потомок Комнинов и хочет умереть за своего императора, если придётся.',
+    note: 'Дон Франсиско был рядом с Константином XI в последнем бою 29 мая 1453 года и погиб вместе с ним.',
+    options: function () { return [
+      opt('Принять его в свиту', { garrison: 50, unity: 4 }, { fn: function (s) { s.flags.toledo = true; } })
+    ]; } }
+];
+
+var MONEY_EVENTS = [
+  { id: 'tithe', w: 2, cond: function (s) { return s.t >= 6; }, title: 'Папская десятина',
+    text: 'Папа разрешил собирать в Италии десятину на защиту Константинополя. Деньги готовы, но легат хочет, чтобы о вашей благодарности узнали в каждом храме города.',
+    note: 'Николай V действительно объявлял сборы на помощь грекам. Собрали немного: Италия была занята своими войнами.',
+    options: function () { return [
+      opt('Принять и поблагодарить публично', { gold: 18, west: 3, unity: -5 }),
+      opt('Принять тихо', { gold: 10 }),
+      opt('Отказаться', { unity: 2 })
+    ]; } },
+  { id: 'magnates', w: 2, cond: function (s) { return s.t >= 4; }, title: 'Золото архонтов',
+    text: 'Богатые семьи города прячут золото, а кое-кто уже перевёл деньги в Венецию и Геную. Казначей предлагает с ними поговорить.',
+    note: 'Османские хронисты писали, что Мехмед, увидев сокровища в домах знати, спросил: почему они не отдали это своему императору?',
+    options: function () { return [
+      opt('Уговорить пожертвовать', { gold: 10, unity: 2 }),
+      opt('Потребовать принудительный заём', { gold: 25, unity: -8 }),
+      opt('Не трогать', {})
+    ]; } }
+];
+RANDOM = RANDOM.concat(MONEY_EVENTS);
+
+function urbanChance(s) { return clamp(Math.round(20 + s.unity / 4 + s.west / 4), 20, 70); }
+
 function eventById(id) {
+  for (var a = 0; a < ALLY_EVENTS.length; a++) if (ALLY_EVENTS[a].id === id) return ALLY_EVENTS[a];
   for (var i = 0; i < HIST.length; i++) if (HIST[i].id === id) return HIST[i];
   for (var j = 0; j < RANDOM.length; j++) if (RANDOM[j].id === id) return RANDOM[j];
   return null;
@@ -717,14 +807,25 @@ function startTurn(s) {
   s.queue = [];
   // 1) события с точной датой
   HIST.forEach(function (e) { if (e.turn === s.t) s.queue.push(e.id); });
-  // 2) сюжетные события с «окном» лет: приходят в случайный ход окна, в последний ход окна — обязательно
+  // 2) союзники за помощь Запада и единство 75 и 100 (приходят обязательно)
+  [['west', 'w'], ['unity', 'u']].forEach(function (pair) {
+    [75, 100].forEach(function (lvl) {
+      var key = pair[1] + lvl;
+      if (s[pair[0]] >= lvl && !s.flags[key]) {
+        s.flags[key] = true;
+        var left = ALLIES[pair[0]].filter(function (id) { return !s.used[id]; });
+        if (left.length) { var id = left[Math.floor(r() * left.length)]; s.queue.push(id); s.used[id] = true; }
+      }
+    });
+  });
+  // 3) сюжетные события с «окном» лет: приходят в случайный ход окна, в последний ход окна — обязательно
   HIST.forEach(function (e) {
     if (e.from === undefined || s.used[e.id] || s.t < e.from || s.t > e.to) return;
     var forced = s.t >= e.to;
     var roll = r();
     if (forced || (s.queue.length < MAX_EVENTS && roll < e.p)) { s.queue.push(e.id); s.used[e.id] = true; }
   });
-  // 3) случайное событие, если есть место (в первый ход — нет)
+  // 4) случайное событие, если есть место (в первый ход — нет)
   if (s.t > 0 && s.queue.length < MAX_EVENTS) {
     var ev = pickRandomEvent(s, r);
     if (ev) { s.queue.push(ev.id); s.used[ev.id] = true; }
@@ -816,16 +917,28 @@ function siegeScore(s) {
   // Без случайности — для подсказок и балансировки. Каждое число — запас прочности этапа (больше нуля — успех).
   var f = s.flags;
   var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) - 65;
-  var naval = s.west * 0.8 + (f.chain ? 20 : 0) - 62;
-  var mines = s.garrison / 100 + (f.grant ? 25 : 0) - 82;
-  var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? 20 : 0)
-    - Math.max(s.threat, 50) * 0.8 - 90;
+  var naval = s.west * 0.8 + (f.chain ? 20 : 0) + (f.venFleet ? 15 : 0) + (f.cretans ? 8 : 0) - 62;
+  var mines = s.garrison / 100 + (f.grant ? (f.halfR ? 12 : 25) : 0) - 82;
+  var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? (f.halfG ? 10 : 20) : 0) + (f.hosp ? 6 : 0) + (f.orhanTurks ? 4 : 0) + (f.toledo ? 3 : 0)
+    - Math.max(s.threat, 50) * 0.8 - 102;
   return { bombard: bombard, naval: naval, mines: mines, assault: assault };
 }
 
 function beginSiege(s) {
   var f = s.flags;
   if (s.morea >= 60) { s.garrison += 500; f.moreaHelp = true; }
+  // Досрочная осада: опоздавшие союзники. Сон — оба (слабее), Реальность — один из двух, Кошмар — никто
+  s.lateArrivals = [];
+  if (f.earlySiege && s.diff !== 'nightmare') {
+    var late = [];
+    if (!s.used.giustiniani) late.push('g');
+    if (!s.used.grant) late.push('r');
+    if (s.diff === 'reality' && late.length > 1) late = [late[Math.floor(rngFor(s, 4242)() * late.length)]];
+    late.forEach(function (x) {
+      if (x === 'g') { f.giustiniani = true; f.halfG = true; s.garrison += 350; s.lateArrivals.push('Джустиниани с половиной отряда'); }
+      else { f.grant = true; f.halfR = true; s.lateArrivals.push('инженер Грант, но без своих мастеров'); }
+    });
+  }
   var base = siegeScore(s);
   var sr = rngFor(s, 999983);
   var r = function (a) { return -a + Math.floor(sr() * (2 * a + 1)); };
@@ -864,6 +977,27 @@ function beginSiege(s) {
   s.siegeStep = 0;
   s.phase = 'siege';
 }
+
+// Военный совет: туманная оценка готовности (без случайности)
+function omen(s) {
+  var m = siegeScore(s);
+  var ok = (m.bombard >= 0) + (m.naval >= 0) + (m.mines >= 0);
+  var total = m.bombard * 0.5 + m.naval * 0.4 + m.mines * 0.4 + (m.assault + ok * 6) * 1.2 + D(s).siege;
+  function lvl(x) { return x >= 10 ? 'крепко' : x >= -10 ? 'шатко' : 'слабо'; }
+  var verdict =
+    total >= 25 ? 'Чаша весов уверенно клонится к вам. Город может не только выстоять, но и перевернуть историю.' :
+    total >= 5 ? 'Весы клонятся к вам, но в бою всё решают часы и случай.' :
+    total >= -10 ? 'Весы колеблются. Исход решит удача.' :
+    total >= -30 ? 'Чаша султана тяжелее. Нужно ещё многое успеть.' :
+    'Весы почти не шевелятся: у султана огромный перевес.';
+  return { verdict: verdict, total: total, stages: [
+    { name: 'Обстрел стен', level: lvl(m.bombard), need: 'Крепкие стены. Пушки Урбана — у вас, а не у султана.' },
+    { name: 'Битва за Золотой Рог', level: lvl(m.naval), need: 'Помощь Запада, цепь в гавани, флот союзников.' },
+    { name: 'Подземная война', level: lvl(m.mines), need: 'Большой гарнизон и инженер Грант.' },
+    { name: 'Генеральный штурм', level: lvl(m.assault), need: 'Гарнизон, единство горожан, Джустиниани, союзники. Чем ниже угроза, тем меньше армия султана.' }
+  ] };
+}
+function councilOpen(s) { return s.diff === 'dream' || !!s.flags.constantine; }
 
 // Прогноз казны на начало следующего хода
 function forecast(s) {
@@ -916,7 +1050,8 @@ var ENDINGS = {
 root.Game = {
   LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
-  rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind,
+  rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
+  eventById: eventById, ALLY_EVENTS: ALLY_EVENTS, startTurn: startTurn,
   newGame: newGame, dateLabel: dateLabel, yearOf: yearOf, income: income, upkeep: upkeep, threatGrowth: threatGrowth,
   describeEff: describeEff, applyEff: applyEff, currentEvent: currentEvent, evText: evText, optionAvailable: optionAvailable,
   resolveEvent: resolveEvent, toggleAction: toggleAction, canChoose: canChoose, chosenCost: chosenCost,
@@ -933,6 +1068,68 @@ root.Game = {
 var G = window.Game;
 var SAVE_KEY = 'constantinople-save-v3';
 var SOUND_KEY = 'constantinople-sound';
+var HALL_KEY = 'constantinople-hall';
+var DEV = /dev/.test(location.hash);
+// ---------- Исторический зал: статьи открываются, когда игрок встречает их в игре ----------
+var HALL = [
+  { id: 'john8', group: 'Люди', title: 'Иоанн VIII Палеолог', start: true,
+    text: 'Император с 1425 по 1448 год. Почти всё правление искал помощи на Западе: ездил в Венецию, Милан, Буду, а в 1438–1439 годах больше года провёл в Италии на церковном соборе. Привёз оттуда унию, которая расколола его подданных, и обещание крестового похода, который закончился Варной. Умер бездетным.' },
+  { id: 'const11', group: 'Люди', title: 'Константин XI Палеолог', open: ['varna', 'john_death'],
+    text: 'Последний император ромеев. До трона был деспотом Мореи и единственным из братьев, кто воевал с турками всерьёз: отстроил Гексамилион, ходил походом в Фессалию. Императором стал в 44 года, правил пять лет. Погиб на стенах 29 мая 1453 года; тело так и не нашли наверняка, отчего родилась легенда о «мраморном царе», который однажды вернётся.' },
+  { id: 'murad2', group: 'Люди', title: 'Мурад II', start: true,
+    text: 'Султан с 1421 по 1451 год. Осторожный и, по меркам своей династии, мягкий. Дважды пытался уйти на покой и передать трон сыну, но оба раза возвращался, когда начиналась война. Константинополь осаждал лишь однажды, в 1422 году, и отступил.' },
+  { id: 'mehmed2', group: 'Люди', title: 'Мехмед II Завоеватель', open: ['murad_death'],
+    text: 'Стал султаном в 19 лет. Знал несколько языков, читал историков Александра Македонского и Цезаря и с юности считал взятие Константинополя своим предназначением. После 1453 года сделал город столицей, назвал себя «кайсаром Рума» и позвал греков обратно заселять опустевшие кварталы.' },
+  { id: 'hunyadi', group: 'Люди', title: 'Янош Хуньяди', open: ['kosovo', 'hunyadi', 'varna'],
+    text: 'Регент Венгрии, сын валашского дворянина. Самый удачливый полководец христианских Балкан: бил турок много раз, хотя проиграл обе главные битвы, при Варне и на Косовом поле. В 1456 году отстоял Белград от Мехмеда II и через три недели умер от чумы.' },
+  { id: 'skanderbeg', group: 'Люди', title: 'Скандербег', open: ['skanderbeg'],
+    text: 'Георгий Кастриоти, сын албанского князя, вырос заложником при дворе султана и получил имя Искандер-бей. В 1443 году бежал домой и четверть века воевал с османами в горах Албании. Албания продержалась ещё 11 лет после его смерти.' },
+  { id: 'orhan', group: 'Люди', title: 'Принц Орхан', open: ['orhan', 'orhan_turks'],
+    text: 'Внук султана Сулеймана, дальний родственник Мехмеда, живший в Константинополе как почётный пленник. Для византийцев он был козырем: в любой момент его можно было выпустить претендентом на османский трон. В 1453 году со своими турками защищал морские стены и погиб.' },
+  { id: 'urban', group: 'Люди', title: 'Мастер Урбан', open: ['urban'],
+    text: 'Литейщик из Венгрии или Трансильвании. Сначала предлагал свои услуги императору, но тот не мог платить. Мехмед заплатил и получил «Базилику» — бомбарду длиной около восьми метров. Пушка стреляла всего несколько раз в день и вскоре треснула, но стены ей поддались.' },
+  { id: 'giustiniani', group: 'Люди', title: 'Джованни Джустиниани Лонго', open: ['giustiniani'],
+    text: 'Генуэзский кондотьер, знаменитый мастер обороны крепостей. Пришёл в январе 1453 года с 700 воинами на собственные деньги. Константин поставил его командовать главным участком стен. 29 мая Джустиниани был тяжело ранен; его уход с поля боя посеял панику. Умер от раны через несколько дней на Хиосе.' },
+  { id: 'grant', group: 'Люди', title: 'Иоганн Грант', open: ['grant'],
+    text: 'Инженер из отряда Джустиниани. Кто он был, немец или шотландец, спорят до сих пор. Под его руководством защитники нашли и обрушили все турецкие подкопы — в одном из них даже взяли в плен офицеров, которые выдали расположение остальных.' },
+  { id: 'notaras', group: 'Люди', title: 'Лука Нотарас', open: ['notaras', 'union_procl'],
+    text: 'Мегадука, то есть командующий флотом, и самый богатый человек города. Противник унии, хотя хранил свои деньги в итальянских банках. После падения Константинополя Мехмед сначала оставил его в живых, но вскоре казнил вместе с сыновьями.' },
+  { id: 'scholarius', group: 'Люди', title: 'Геннадий Схоларий', open: ['scholarius', 'athos'],
+    text: 'Философ и богослов, на соборе во Флоренции поддерживал унию, а вернувшись, стал её главным противником и ушёл в монахи. После 1453 года Мехмед сделал его патриархом — главой всех православных в Османской империи.' },
+  { id: 'bessarion', group: 'Люди', title: 'Виссарион Никейский', open: ['bessarion'],
+    text: 'Митрополит Никеи, который на соборе выбрал сторону унии и остался в Италии кардиналом. Всю жизнь собирал греческие рукописи и в 1468 году подарил Венеции около тысячи книг. С них началась библиотека Марчиана.' },
+  { id: 'plethon', group: 'Люди', title: 'Георгий Гемист Плифон', open: ['plethon'],
+    text: 'Философ из Мистры, поклонник Платона. Писал императорам проекты реформ Мореи: армия из своих, а не из наёмников, справедливые налоги. Во Флоренции так впечатлил Козимо Медичи, что тот основал Платоновскую академию. Умер в 1452 году, за год до падения города.' },
+  { id: 'walls', group: 'Места', title: 'Феодосиевы стены', start: true,
+    text: 'Построены в V веке при императоре Феодосии II: ров, внешняя стена, внутренняя стена и почти сто башен. Тысячу лет их не мог взять ни один враг. В 1204 году крестоносцы вошли в город с моря, а не через эти стены.' },
+  { id: 'horn', group: 'Места', title: 'Золотой Рог и цепь', open: ['chain'],
+    text: 'Залив, в котором стоял флот и шла торговля. Вход в него закрывали огромной цепью от башни Евгения до Галаты. В 1453 году Мехмед обошёл цепь: перетащил около 70 кораблей волоком через холмы Галаты.' },
+  { id: 'morea', group: 'Места', title: 'Морея и Мистра', start: true,
+    text: 'Пелопоннес, последняя крупная область империи. Столица — Мистра на склоне горы над Спартой, где в XV веке собрались учёные и художники. Морея пережила Константинополь лишь на семь лет.' },
+  { id: 'galata', group: 'Места', title: 'Галата', open: ['galata', 'fire2'],
+    text: 'Генуэзская колония на другом берегу Золотого Рога, со своими стенами и Галатской башней. Через неё шла почти вся торговля проливов. В 1453 году Галата объявила нейтралитет и торговала с обеими сторонами.' },
+  { id: 'rumeli', group: 'Места', title: 'Румелихисар', open: ['rumeli'],
+    text: 'Крепость на европейском берегу Босфора, построенная за четыре с половиной месяца 1452 года. Напротив стояла старая турецкая крепость Анадолухисар. Вместе они перекрыли пролив: венецианский корабль, не спустивший парусов, был потоплен, а капитан казнён.' },
+  { id: 'union', group: 'События', title: 'Флорентийская уния', start: true,
+    text: 'Соглашение 1439 года об объединении православной и католической церквей. Греки признали власть папы в обмен на обещание военной помощи. Дома унию почти никто не принял, а помощь так и не пришла в нужном размере. В 1484 году православная церковь её официально отвергла.' },
+  { id: 'varna', group: 'События', title: 'Варненский крестовый поход', open: ['varna'],
+    text: 'Поход венгров, поляков и валахов 1444 года, задуманный как помощь Византии. 10 ноября у Варны армия была разбита, король Владислав погиб в атаке на шатёр султана. Последний большой крестовый поход в истории.' },
+  { id: 'siege', group: 'События', title: 'Осада 1453 года', open: ['siege'],
+    text: 'Длилась 53 дня, с 6 апреля по 29 мая. Около 7000 защитников против армии, которую оценивают от 60 до 100 тысяч. Город пал после третьей волны штурма. Мехмед отдал его войскам на три дня, а затем въехал в Святую Софию и велел превратить её в мечеть.' }
+];
+
+function hallSeen() { try { return JSON.parse(localStorage.getItem(HALL_KEY) || '[]'); } catch (e) { return []; } }
+function hallMark(id) {
+  var seen = hallSeen();
+  if (seen.indexOf(id) < 0) { seen.push(id); try { localStorage.setItem(HALL_KEY, JSON.stringify(seen)); } catch (e) {} }
+}
+function hallOpen(entry, seen) {
+  if (entry.start) return true;
+  for (var i = 0; i < entry.open.length; i++) if (seen.indexOf(entry.open[i]) >= 0) return true;
+  return false;
+}
+var hallSel = null;
+
 var app = document.getElementById('app');
 var S = null;          // текущая партия
 var view = 'title';    // title | setup | intro | game
@@ -1025,19 +1222,21 @@ function renderTitle() {
     (canContinue ? '<button class="btn" data-a="continue">Продолжить</button>' : '') +
     '<button class="btn ' + (canContinue ? 'ghost' : '') + '" data-a="setup">Новая игра</button>' +
     '<button class="btn ghost" data-a="help">Как играть</button>' +
+    '<button class="btn ghost" data-a="hall">🏛 Исторический зал</button>' +
     '</div><div class="row"><button class="icon-btn" data-a="sound">' + (Sound.isOn() ? '🔊 Звук включён' : '🔇 Звук выключен') + '</button></div>'
   ) + renderPopup();
 }
 
 function renderSetup() {
-  var h = '<div class="kicker">Новая игра</div><h2>Выберите сложность</h2>' + '<label class="check"><input type="checkbox" id="shuffle" ' + (pendingShuffle ? 'checked' : '') + '> 🎲 Случайная расстановка сил' +
-    '<small>Ресурсы на старте перераспределятся: например, войска больше, но стены слабее. Работает на любой сложности.</small></label>' + '<div class="diffs">';
+  var h = '<div class="kicker">Новая игра</div><h2>Выберите сложность</h2><div class="diffs">';
   ['dream', 'reality', 'nightmare'].forEach(function (k) {
     var d = G.DIFFS[k];
     h += '<button class="diff ' + (k === 'reality' ? 'main' : '') + '" data-diff="' + k + '"><span class="t">' + d.icon + ' ' + d.name +
       (k === 'reality' ? ' <small style="color:var(--muted);font-size:13px">— рекомендуется</small>' : '') + '</span><span class="d">' + d.desc + '</span></button>';
   });
-  h += '</div><div class="row"><button class="btn ghost" data-a="to-title">Назад</button></div>';
+  h += '</div><label class="check"><input type="checkbox" id="shuffle" ' + (pendingShuffle ? 'checked' : '') + '> 🎲 Случайная расстановка сил' +
+    '<small>Отметьте до выбора сложности. Ресурсы на старте перераспределятся: например, войска больше, но стены слабее.</small></label>' +
+    '<div class="row"><button class="btn ghost" data-a="to-title">Назад</button></div>';
   app.innerHTML = screen(h);
 }
 
@@ -1107,6 +1306,8 @@ function renderGame() {
   }
 
   h += '<div class="rulers">' + rulerCard(s.ruler) + rulerCard(s.sultan, true) + '</div>';
+  h += '<div class="toolbar"><button class="btn ghost" data-a="council">🛡 Военный совет' + (G.councilOpen(s) ? '' : ' 🔒') + '</button>' +
+    '<button class="btn ghost" data-a="hall">🏛 Исторический зал</button>' + (DEV ? '<button class="btn ghost" data-a="dev">⚙ Разработчик</button>' : '') + '</div>';
 
   h += '<div class="stats">' +
     statCard('gold', s.gold, p.gold) +
@@ -1210,7 +1411,7 @@ function eventModal() {
   opts.forEach(function (o, i) {
     var ok = G.optionAvailable(s, o);
     h += '<button class="opt" data-opt="' + i + '" ' + (ok ? '' : 'disabled') + '><span class="t">' + o.text + '</span>' +
-      chips(o.eff) + (ok ? '' : '<span class="why">' + (o.reqText || 'Недоступно') + '</span>') + '</button>';
+      chips(o.eff) + (o.hint ? '<span class="hint">' + o.hint + '</span>' : '') + (ok ? '' : '<span class="why">' + (o.reqText || 'Недоступно') + '</span>') + '</button>';
   });
   return h + '</div><div class="row"><button class="btn ghost" data-a="defer">Отложить решение — посмотреть ресурсы</button></div></div></div>';
 }
@@ -1240,7 +1441,7 @@ function siegeModal() {
       '<tr><td>Джустиниани</td><td>' + (s.flags.giustiniani ? 'в городе' : 'нет') + '</td></tr>' +
       '<tr><td>Цепь Золотого Рога</td><td>' + (s.flags.chain ? 'починена' : 'ржавая') + '</td></tr>' +
       '<tr><td>Инженер Грант</td><td>' + (s.flags.grant ? 'в городе' : 'нет') + '</td></tr>' +
-      '</table>';
+      '</table>' + (s.lateArrivals && s.lateArrivals.length ? '<p class="note">В последний момент успели прийти: ' + s.lateArrivals.join(' и ') + '.</p>' : '');
   }
   for (var i = 0; i < n; i++) {
     var st = sg.stages[i];
@@ -1285,10 +1486,68 @@ function renderPopup() {
       '<div class="row" style="flex-direction:column;align-items:stretch">' +
       '<button class="btn" data-a="close-popup">Вернуться к игре</button>' +
       '<button class="btn ghost" data-a="help">Как играть</button>' +
+      '<button class="btn ghost" data-a="hall">🏛 Исторический зал</button>' +
       '<button class="btn ghost" data-a="sound">' + (Sound.isOn() ? '🔊 Выключить звук' : '🔇 Включить звук') + '</button>' +
       '<button class="btn ghost" data-a="confirm-new">Начать заново</button>' +
       '<button class="btn ghost" data-a="to-title">На главный экран</button>' +
       '</div></div></div>';
+  }
+  if (popup === 'hall') {
+    var seen = hallSeen(), opened = 0, hh = '';
+    if (hallSel) {
+      var en = HALL.filter(function (x) { return x.id === hallSel; })[0];
+      return '<div class="overlay"><div class="modal"><div class="kicker">🏛 Исторический зал · ' + en.group + '</div><h2>' + en.title + '</h2><p>' + en.text + '</p>' +
+        '<div class="row"><button class="btn ghost" data-a="hall-back">← Ко всем статьям</button><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
+    }
+    ['Люди', 'Места', 'События'].forEach(function (g) {
+      hh += '<div class="lh" style="margin-top:12px"><span>' + g.toUpperCase() + '</span></div><div class="hall">';
+      HALL.forEach(function (en) {
+        if (en.group !== g) return;
+        if (hallOpen(en, seen)) { opened++; hh += '<button class="opt" data-hall="' + en.id + '"><span class="t">' + en.title + '</span></button>'; }
+        else hh += '<button class="opt" disabled><span class="t">🔒 ???</span></button>';
+      });
+      hh += '</div>';
+    });
+    return '<div class="overlay"><div class="modal"><div class="kicker">Открыто ' + opened + ' из ' + HALL.length + '</div><h2>🏛 Исторический зал</h2>' +
+      '<p style="color:var(--muted);font-size:14px">Статьи открываются, когда вы встречаете людей и события в игре, и остаются открытыми навсегда.</p>' + hh +
+      '<div class="row"><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
+  }
+  if (popup === 'council') {
+    if (!G.councilOpen(S)) {
+      return '<div class="overlay"><div class="modal center"><div class="kicker">🛡 Военный совет</div><h2>Совет ещё не собран</h2>' +
+        '<p>Иоанн VIII — дипломат и надеется на помощь Запада. Всерьёз готовить город к обороне начнёт его брат Константин, когда взойдёт на трон.</p>' +
+        '<div class="row"><button class="btn" data-a="close-popup">Понятно</button></div></div></div>';
+    }
+    var om = G.omen(S), ch = '';
+    om.stages.forEach(function (st) {
+      var col = st.level === 'крепко' ? 'var(--good)' : st.level === 'шатко' ? 'var(--warn)' : 'var(--bad)';
+      ch += '<div class="stage"><div class="st"><span>' + st.name + '</span><span style="color:' + col + '">' + st.level + '</span></div><p>' + st.need + '</p></div>';
+    });
+    return '<div class="overlay"><div class="modal"><div class="kicker">🛡 Военный совет · ' + G.dateLabel(S.t) + '</div><h2>Готовы ли мы к осаде?</h2>' +
+      '<p style="font-size:14px;color:var(--muted)">Оценка по нынешнему положению дел. Помните: стены ветшают, а угроза до осады ещё вырастет.</p>' + ch +
+      '<div class="note" style="font-style:normal">⚖️ <b style="color:var(--gold2);font-weight:normal">Весы судьбы:</b> ' + om.verdict + '</div>' +
+      '<div class="row"><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
+  }
+  if (popup === 'dev') {
+    var sc = G.siegeScore(S), omd = G.omen(S), evOpts = '';
+    G.HIST.concat(G.RANDOM, G.ALLY_EVENTS).forEach(function (e) { evOpts += '<option value="' + e.id + '">' + e.title + (S.used[e.id] ? ' (было)' : '') + '</option>'; });
+    var round = function (x) { return Math.round(x * 10) / 10; };
+    return '<div class="overlay"><div class="modal"><div class="kicker">Только для автора · ссылка с #dev</div><h2>⚙ Режим разработчика</h2>' +
+      '<table class="tbl">' +
+      '<tr><td>Ход (t)</td><td>' + S.t + ' · фаза ' + S.phase + '</td></tr>' +
+      '<tr><td>Доход / жалованье / рост угрозы</td><td>' + G.income(S) + ' / ' + G.upkeep(S) + ' / ' + G.threatGrowth(S) + '</td></tr>' +
+      '<tr><td>Осада: обстрел / флот / подкопы / штурм</td><td>' + round(sc.bombard) + ' / ' + round(sc.naval) + ' / ' + round(sc.mines) + ' / ' + round(sc.assault) + '</td></tr>' +
+      '<tr><td>Ожидаемый итог осады (без случайности)</td><td>' + round(omd.total) + '</td></tr>' +
+      '<tr><td>Флаги</td><td style="font-size:12px">' + Object.keys(S.flags).filter(function (k) { return S.flags[k]; }).join(', ') + '</td></tr>' +
+      '<tr><td>Очередь событий</td><td>' + (S.queue.join(', ') || '—') + '</td></tr>' +
+      '</table>' +
+      '<div class="row"><button class="btn ghost" data-dev="gold">+50 золота</button><button class="btn ghost" data-dev="west">+20 Запад</button>' +
+      '<button class="btn ghost" data-dev="unity">+20 единство</button><button class="btn ghost" data-dev="threat">−20 угроза</button>' +
+      '<button class="btn ghost" data-dev="walls">+20 стены</button><button class="btn ghost" data-dev="garrison">+1000 воинов</button></div>' +
+      '<div class="row"><select id="devEv" class="sel">' + evOpts + '</select><button class="btn ghost" data-dev="event">Вызвать событие</button></div>' +
+      '<div class="row"><button class="btn ghost" data-dev="t17">Прыгнуть в 1452 год</button><button class="btn ghost" data-dev="siege">Сразу к осаде</button></div>' +
+      '<p style="font-size:13px;color:var(--muted)">Ожидаемый итог: больше 0 — скорее победа. Концовки: меньше −20 падение, −20…0 героическая оборона, 0 и выше — отбитая осада, 25 и выше при Западе ≥ 60 и единстве ≥ 30 — альтернативная история. Случайность в осаде ±20–30.</p>' +
+      '<div class="row"><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
   }
   if (popup === 'rewind' && rewindTarget !== null) {
     var lft = G.rewindsLeft(S), rr = G.DIFFS[S.diff].reroll;
@@ -1310,6 +1569,15 @@ function render() {
   if (view === 'intro') return renderIntro();
   if (view === 'title' || !S) return renderTitle();
   renderGame();
+}
+
+function devAction(k) {
+  var s = S;
+  var add = { gold: ['gold', 50], west: ['west', 20], unity: ['unity', 20], threat: ['threat', -20], walls: ['walls', 20], garrison: ['garrison', 1000] }[k];
+  if (add) { var e = {}; e[add[0]] = add[1]; G.applyEff(s, e); return; }
+  if (k === 'event') { var id = document.getElementById('devEv').value; s.queue.unshift(id); s.phase = 'events'; s.hideEvent = false; popup = null; return; }
+  if (k === 't17') { s.t = 16; s.flags.constantine = true; s.ruler = 'Константин XI'; s.flags.mehmed = true; s.sultan = 'Мехмед II'; G.startTurn(s); popup = null; return; }
+  if (k === 'siege') { s.t = G.LAST_TURN; s.queue = []; s.phase = 'actions'; s.chosen = []; G.endTurn(s); popup = null; return; }
 }
 
 // Какой звук сыграть после изменения состояния
@@ -1334,9 +1602,11 @@ app.addEventListener('click', function (e) {
   if (!b || b.disabled) return;
   var a = b.getAttribute('data-a');
   var before = S ? S.phase : null;
+  if (b.hasAttribute('data-hall')) { hallSel = b.getAttribute('data-hall'); Sound.click(); render(); return; }
+  if (b.hasAttribute('data-dev')) { devAction(b.getAttribute('data-dev')); save(); render(); return; }
   if (b.hasAttribute('data-rewind')) { rewindTarget = +b.getAttribute('data-rewind'); popup = 'rewind'; Sound.click(); render(); return; }
   if (b.hasAttribute('data-act')) { G.toggleAction(S, b.getAttribute('data-act')); Sound.select(); save(); render(); return; }
-  if (b.hasAttribute('data-opt')) { G.resolveEvent(S, +b.getAttribute('data-opt')); Sound.click(); save(); render(); return; }
+  if (b.hasAttribute('data-opt')) { var ce = G.currentEvent(S); if (ce) hallMark(ce.id); G.resolveEvent(S, +b.getAttribute('data-opt')); Sound.click(); save(); render(); return; }
   if (b.hasAttribute('data-diff')) { var cb = document.getElementById('shuffle'); pendingShuffle = !!(cb && cb.checked); pendingDiff = b.getAttribute('data-diff'); introPage = 0; view = 'intro'; Sound.click(); render(); return; }
   Sound.click();
   switch (a) {
@@ -1346,6 +1616,10 @@ app.addEventListener('click', function (e) {
     case 'intro-skip': S = G.newGame(null, pendingDiff, pendingShuffle); view = 'game'; save(); Sound.turn(); break;
     case 'intro-back': introPage = Math.max(0, introPage - 1); break;
     case 'help': popup = 'help'; break;
+    case 'hall': popup = 'hall'; hallSel = null; break;
+    case 'hall-back': hallSel = null; break;
+    case 'council': popup = 'council'; break;
+    case 'dev': popup = 'dev'; break;
     case 'menu': popup = 'menu'; break;
     case 'sound': Sound.toggle(); break;
     case 'confirm-new': popup = 'confirm-new'; break;
@@ -1359,6 +1633,7 @@ app.addEventListener('click', function (e) {
       if (S.phase === 'events' || S.phase === 'actions') Sound.turn();
       afterChange(before); break;
     case 'siege':
+      hallMark('siege');
       if (S.siegeStep < S.siege.stages.length) { S.siegeStep++; S.siege.stages[S.siegeStep - 1].ok ? Sound.ok() : Sound.fail(); }
       else { G.siegeDone(S); afterChange(before); }
       save(); break;
