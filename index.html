@@ -543,13 +543,13 @@ var RANDOM = [
       opt('Поддержать Фому, друга латинян', { west: 4, morea: -6 }),
       opt('Пусть разбираются сами', { morea: -10 })
     ]; } },
-  { id: 'demetrios', w: 2, cond: function (s) { return s.used.morea_quarrel && H(s) >= 8; }, title: 'Димитрий ищет защиты у султана',
-    text: 'Деспот Димитрий, обиженный на брата, тайно отправил послов к султану: он готов стать его верным вассалом в обмен на поддержку против Фомы.',
-    note: 'Так и случилось: Димитрий опирался на турок, а в 1460 году сдал Мехмеду свою часть Мореи и доживал жизнь при дворе султана.',
+  { id: 'kastri', w: 2, cond: function (s) { return H(s) >= 10; }, title: 'Деспот Димитрий и замок Кастри',
+    text: 'Деспот Димитрий, младший брат императора, захватил Кастри — замок в Морее, который держали венецианцы. В Венеции возмущены, байло требует объяснений, а Димитрий пишет, что лишь вернул «исконно ромейскую землю».',
+    note: 'Димитрий правил частью Мореи с 1449 года и пытался расширить владения, в том числе за счёт венецианских крепостей. Каждая такая ссора отталкивала Венецию, без флота которой Константинополю было не выстоять.',
     options: function () { return [
-      opt('Отдать Димитрию лучшие земли', { morea: -5, threat: -5, unity: -3 }, { result: 'Димитрий доволен, султан тоже. Морея слабеет.' }),
-      opt('Пригрозить Димитрию судом', { morea: 4, threat: 6 }),
-      opt('Перекупить его советников', { gold: -12, morea: 6 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота' })
+      opt('Поддержать брата', { morea: 6, west: -8 }),
+      opt('Отчитать Димитрия и извиниться перед Венецией', { morea: -3, west: 4, unity: -2 }),
+      opt('Выкупить замок у венецианцев', { gold: -15, morea: 5, west: 2 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Не хватает золота' })
     ]; } },
   { id: 'skanderbeg', w: 2, cond: function (s) { return H(s) <= 14; }, title: 'Скандербег',
     text: 'Албанский князь Георгий Кастриоти по прозвищу Скандербег восстал против султана и громит его армии в горах. Он просит денег.',
@@ -684,7 +684,7 @@ var RANDOM = [
 
 // Союзники за высокую помощь Запада и единство (приходят при 75 и при 100)
 var ALLIES = {
-  west: ['cretans', 'loredan', 'hospitallers'],
+  west: ['cretans', 'venice_fleet', 'hospitallers'],
   unity: ['militia', 'orhan_turks', 'toledo']
 };
 var ALLY_EVENTS = [
@@ -701,12 +701,19 @@ var ALLY_EVENTS = [
     options: function () { return [
       opt('Поставить их на морские стены', { garrison: 300 }, { fn: function (s) { s.flags.cretans = true; } })
     ]; } },
-  { id: 'loredan', ally: true, title: 'Флот Лоредана',
-    text: 'Венеция решилась: адмирал Джакомо Лоредан готов привести галеры к городу. Но сенат, как всегда, просит кое-что взамен — торговые льготы.',
-    note: 'Флот Лоредана действительно вышел к Константинополю весной 1453 года. Он опоздал: город пал раньше, чем галеры добрались до Дарданелл.',
+  { id: 'venice_fleet', ally: true, title: 'Венецианские галеры',
+    text: 'Венецианский сенат наконец решился послать галеры к Константинополю. Как всегда, не бесплатно: Венеция просит новых торговых льгот.',
+    note: 'В действительности сенат спорил месяцами, и флот вышел в море только в апреле 1453 года, когда осада уже шла.',
     options: function () { return [
-      opt('Дать Венеции льготы', { income: -2, west: 3 }, { fn: function (s) { s.flags.venFleet = true; }, result: 'Галеры Лоредана придут к весне. В этот раз — вовремя.' }),
+      opt('Дать Венеции льготы', { income: -2, west: 3 }, { fn: function (s) { s.flags.venFleet = true; }, result: 'Галеры придут к весне. В этот раз, возможно, вовремя.' }),
       opt('Отказаться', { west: -5 })
+    ]; } },
+  { id: 'loredan_early', ally: true, title: 'Адмирал Лоредан у Золотого Рога',
+    text: 'Галеры Джакомо Лоредана вошли в Золотой Рог ещё до весны — на несколько месяцев раньше, чем в настоящей истории. Адмирал готов отдать своих людей в распоряжение императора.',
+    note: 'В 1453 году Лоредан дошёл лишь до Эгейского моря, когда узнал о падении города. Здесь он успел.',
+    options: function () { return [
+      opt('Поставить моряков на стены', { garrison: 400 }, { fn: function (s) { s.flags.loredanEarly = true; } }),
+      opt('Поручить ему охрану гавани и цепи', {}, { fn: function (s) { s.flags.loredanEarly = true; s.flags.loredanHarbor = true; }, result: 'Венецианские галеры встали у цепи. Теперь турецкому флоту будет куда труднее.' })
     ]; } },
   { id: 'hospitallers', ally: true, title: 'Рыцари с Родоса',
     text: 'Великий магистр иоаннитов Жан де Ластик прислал отряд рыцарей и сержантов. Орден помнит, что держится на Родосе только пока стоит Константинополь.',
@@ -737,9 +744,16 @@ var ALLY_EVENTS = [
 ];
 
 var MONEY_EVENTS = [
+  { id: 'thoisy2', w: 4, cond: function (s) { return s.flags.thoisyHelped && H(s) <= 5; }, title: 'Бургундец в плену',
+    text: 'Тревожные вести с Кавказа. Жоффруа де Туази решил захватить корабли с шёлком у грузинских берегов, хотя император Трапезунда предупреждал, что грузины — христиане. В порту Вати его ждала засада: многие бургундцы убиты, сам рыцарь в плену. Его люди просят вас заступиться.',
+    note: 'Так и было. Грузин предупредили греки из Трапезунда. Освободили де Туази при посредничестве трапезундского императора, а на обратном пути он успел захватить ещё два греческих судна с рыбой.',
+    options: function () { return [
+      opt('Написать императору Трапезунда', { gold: -5, west: 5 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Не хватает золота', result: 'Через месяц де Туази уже на своей галере. Бургундский двор вам благодарен.' }),
+      opt('Не вмешиваться: он грабил христиан', { unity: 2, west: -2 })
+    ]; } },
   { id: 'theophilos', w: 2, cond: function (s) { return H(s) >= 12; }, title: 'Феофил Палеолог',
     text: 'Дальний родственник императора Феофил Палеолог, знаток греческих книг и математики, взялся учить горожан стрельбе и осадному делу. Ему нужны деньги на луки и арбалеты — или дайте ему участок стены.',
-    note: 'По преданию, когда турки ворвались в город, Феофил крикнул: «Город пал, а я ещё жив!» — и бросился в бой.',
+    note: 'По преданию, Феофил погиб 29 мая рядом с Константином XI, защищая своего императора до последнего.',
     options: function () { return [
       opt('Дать денег на оружие', { gold: -10, garrison: 400 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
       opt('Поручить ему ремонт у Харисийских ворот', { gold: -6, walls: 5 }, { req: function (s) { return s.gold >= 6; }, reqText: 'Не хватает золота' }),
@@ -755,9 +769,9 @@ var MONEY_EVENTS = [
     ]; } },
   { id: 'thoisy', w: 3, cond: function (s) { return H(s) <= 3; }, title: 'Бургундские галеры',
     text: 'В Чёрное море вошли галеры герцога Бургундского. Ими командует рыцарь Жоффруа де Туази: бургундцы приплыли воевать с турками, несмотря на Варну, и просят пристанища и припасов.',
-    note: 'Бургундская эскадра 1444–1445 годов была последней попыткой Запада продолжить крестовый поход на море. Де Туази грабил турецкие берега, а потом сам попал в плен у берегов Кавказа и был выкуплен.',
+    note: 'Бургундская эскадра 1444–1445 годов была последней попыткой Запада продолжить крестовый поход на море. Де Туази пиратствовал у южного берега Чёрного моря, а у Батуми попал в засаду и в плен к грузинам.',
     options: function () { return [
-      opt('Дать пристанище и припасы', { gold: -8, west: 6, threat: 3 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' }),
+      opt('Дать пристанище и припасы', { gold: -8, west: 6, threat: 3 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.thoisyHelped = true; } }),
       opt('Вежливо выпроводить', { threat: -2 })
     ]; } },
   { id: 'tithe', w: 2, cond: function (s) { return H(s) >= 6; }, title: 'Папская десятина',
@@ -778,6 +792,29 @@ var MONEY_EVENTS = [
     ]; } }
 ];
 RANDOM = RANDOM.concat(MONEY_EVENTS);
+
+// Точные условия событий — для справочника разработчика (держать в согласии с cond!)
+var WHEN = {
+  galata: 'в любое время', venice_loan: 'в любое время', athos: 'в любое время',
+  morea_quarrel: 'с июля 1445 (полугодие ≥ 3)', kastri: 'с января 1449 (полугодие ≥ 10)',
+  skanderbeg: 'до июня 1451 (полугодие ≤ 14)', earthquake: 'в любое время', harvest: 'в любое время',
+  fire: 'в любое время', fire2: 'после «Пожара в гавани», с января 1447 (полугодие ≥ 6)', unpaid: 'когда гарнизон ≥ 5000',
+  envoy: 'в любое время', pope: 'с января 1447 (полугодие ≥ 6)', bride: 'после воцарения Константина, до декабря 1451 (полугодие ≤ 15)',
+  catalans: 'в любое время', church_silver: 'с января 1450 (полугодие ≥ 12)', notaras: 'в любое время',
+  hunyadi: 'с января 1446 по июнь 1448 (полугодие 4–8)', bessarion: 'в любое время', famine: 'в любое время', pirates: 'в любое время',
+  scholarius: 'с января 1449 (полугодие ≥ 10)', plethon: 'до июня 1451 (полугодие ≤ 14)',
+  thoisy: 'до декабря 1445 (полугодие ≤ 3)', thoisy2: 'если в «Бургундских галерах» дали пристанище; до декабря 1446 (полугодие ≤ 5)',
+  theophilos: 'с января 1450 (полугодие ≥ 12)', kantakouzenos: 'с января 1450 (полугодие ≥ 12)',
+  tithe: 'с января 1447 (полугодие ≥ 6)', magnates: 'с января 1446 (полугодие ≥ 4)',
+  cretans: 'помощь Запада 75 или 100 — приходит один из трёх: критяне, венецианские галеры, иоанниты',
+  venice_fleet: 'помощь Запада 75 или 100 — приходит один из трёх: критяне, венецианские галеры, иоанниты',
+  hospitallers: 'помощь Запада 75 или 100 — приходит один из трёх: критяне, венецианские галеры, иоанниты',
+  militia: 'единство 75 или 100 — приходит один из трёх: ополчение, турки Орхана, де Толедо',
+  orhan_turks: 'единство 75 или 100 — приходит один из трёх: ополчение, турки Орхана, де Толедо',
+  toledo: 'единство 75 или 100 — приходит один из трёх: ополчение, турки Орхана, де Толедо',
+  loredan_early: 'если Венеции дали льготы в «Венецианских галерах»; с июля 1452 (полугодие ≥ 17), обязательно',
+  morea100: 'Морея впервые достигла 100, обязательно'
+};
 
 function urbanChance(s) { return clamp(Math.round(20 + s.unity / 4 + s.west / 4), 20, 70); }
 
@@ -876,6 +913,7 @@ function startTurn(s) {
       }
     });
   });
+  if (s.flags.venFleet && !s.used.loredan_early && half >= 17) { s.queue.push('loredan_early'); s.used.loredan_early = true; }
   if (s.morea >= 100 && !s.flags.moreaMax) { s.flags.moreaMax = true; s.queue.push('morea100'); }
   // 3) сюжетные события с «окном» лет: приходят в случайный ход окна, в последний ход окна — обязательно
   HIST.forEach(function (e) {
@@ -977,7 +1015,7 @@ function siegeScore(s) {
   // Без случайности — для подсказок и балансировки. Каждое число — запас прочности этапа (больше нуля — успех).
   var f = s.flags;
   var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) - 65;
-  var naval = s.west * 0.8 + (f.chain ? 20 : 0) + (f.venFleet ? 15 : 0) + (f.cretans ? 8 : 0) - 62;
+  var naval = s.west * 0.8 + (f.chain ? 20 : 0) + (f.venFleet ? 15 : 0) + (f.loredanHarbor ? 10 : 0) + (f.cretans ? 8 : 0) - 62;
   var mines = s.garrison / 100 + (f.grant ? (f.halfR ? 12 : 25) : 0) - 82;
   var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? (f.halfG ? 10 : 20) : 0) + (f.hosp ? 6 : 0) + (f.orhanTurks ? 4 : 0) + (f.toledo ? 3 : 0) + (f.westMax ? 5 : 0) + (f.unityMax ? 5 : 0)
     - Math.max(s.threat, 50) * 0.8 - 110;
@@ -1112,7 +1150,7 @@ root.Game = {
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
-  eventById: eventById, ALLY_EVENTS: ALLY_EVENTS, startTurn: startTurn,
+  eventById: eventById, ALLY_EVENTS: ALLY_EVENTS, startTurn: startTurn, WHEN: WHEN,
   newGame: newGame, dateLabel: dateLabel, yearOf: yearOf, income: income, upkeep: upkeep, threatGrowth: threatGrowth,
   describeEff: describeEff, applyEff: applyEff, currentEvent: currentEvent, evText: evText, optionAvailable: optionAvailable,
   resolveEvent: resolveEvent, toggleAction: toggleAction, canChoose: canChoose, chosenCost: chosenCost,
@@ -1625,21 +1663,16 @@ function renderPopup() {
       '<div class="row"><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
   }
   if (popup === 'devref') {
-    var COND = { morea_quarrel: 'с конца 1445', demetrios: 'после ссоры деспотов, с 1448', skanderbeg: 'до начала 1451', pope: 'с 1447',
-      bride: 'при Константине, до конца 1451', church_silver: 'с 1450', hunyadi: '1446–1448', scholarius: 'с 1449', plethon: 'до начала 1451',
-      fire2: 'после первого пожара, с 1447', unpaid: 'при гарнизоне от 5000', tithe: 'с 1447', magnates: 'с 1446', theophilos: 'с 1450',
-      kantakouzenos: 'с 1450', thoisy: '1444–1445' };
-    var ALLYT = { cretans: 'Запад 75 или 100 (один из трёх)', loredan: 'Запад 75 или 100 (один из трёх)', hospitallers: 'Запад 75 или 100 (один из трёх)',
-      militia: 'Единство 75 или 100 (один из трёх)', orhan_turks: 'Единство 75 или 100 (один из трёх)', toledo: 'Единство 75 или 100 (один из трёх)', morea100: 'Морея 100' };
     var block = function (title, list, when) {
       var out = '<div class="lh" style="margin-top:14px"><span>' + title + ' (' + list.length + ')</span></div>';
       list.forEach(function (e) {
         out += '<div class="stage"><div class="st"><span>' + e.title + '</span><span style="font-size:12px;color:var(--muted)">' + e.id + '</span></div>' +
-          '<div style="font-size:12.5px;color:var(--gold)">' + when(e) + '</div>';
+          '<div style="font-size:12.5px;color:var(--gold)">' + when(e) + '</div>' +
+          '<div style="font-size:12.5px">' + status(e) + '</div>';
         e.options(S).forEach(function (o) {
           var eff = G.describeEff(o.eff).map(function (c) { return c.text; }).join(', ');
           out += '<p style="margin:4px 0 0">• ' + o.text + (eff ? ' — <span style="color:var(--muted)">' + eff + '</span>' : '') +
-            (o.req ? ' <span style="color:var(--bad);font-size:12px">[есть условие]</span>' : '') +
+            (o.req ? ' <span style="color:var(--bad);font-size:12px">[' + (o.reqText || 'есть условие') + ']</span>' : '') +
             (o.fn ? ' <span style="color:var(--warn);font-size:12px">[особый эффект]</span>' : '') + '</p>';
         });
         out += '</div>';
@@ -1647,23 +1680,31 @@ function renderPopup() {
       return out;
     };
     var hl = function (x) { return G.dateLabel(x, 'half'); };
+    var half = G.H(S);
+    var status = function (e) {
+      if (e.turn !== undefined) return half > e.turn ? '✔ дата прошла' : half === e.turn ? '📍 в этом полугодии' : '⏳ ещё впереди';
+      if (S.used[e.id]) return '✔ уже было в этой партии';
+      if (e.from !== undefined) return half < e.from ? '⏳ окно ещё не открылось' : half > e.to ? '✖ окно закрылось' : '✅ окно открыто, может прийти в любой ход';
+      if (e.ally) return '⛔ ждёт условия';
+      return (!e.cond || e.cond(S)) ? '✅ может выпасть сейчас' : '⛔ условие сейчас не выполнено';
+    };
     var body = block('СЮЖЕТНЫЕ', G.HIST, function (e) {
         return e.turn !== undefined ? 'Точная дата: ' + hl(e.turn)
           : 'Окно: ' + hl(e.from) + ' … ' + hl(e.to) + ', шанс за полгода ' + Math.round(e.p * 100) + '%, в конце окна — обязательно';
       }) +
-      block('СОЮЗНИКИ', G.ALLY_EVENTS, function (e) { return 'Условие: ' + ALLYT[e.id]; }) +
-      block('СЛУЧАЙНЫЕ', G.RANDOM, function (e) { return 'Когда: ' + (COND[e.id] || 'в любое время') + ' · вес ' + e.w; });
+      block('СОЮЗНИКИ И БОНУСЫ', G.ALLY_EVENTS, function (e) { return 'Условие: ' + (G.WHEN[e.id] || '—'); }) +
+      block('СЛУЧАЙНЫЕ', G.RANDOM, function (e) { return 'Условие: ' + (G.WHEN[e.id] || 'в любое время') + ' · вес ' + e.w + ' (чем больше, тем чаще выпадает среди доступных)'; });
     var formula = '<div class="lh" style="margin-top:14px"><span>ФОРМУЛА ОСАДЫ</span></div><div class="stage" style="font-size:13.5px">' +
       '<p><b>Обстрел</b> = стены × 0,8 + 15 (Урбан у вас) − 15 (Урбан у султана) − 65</p>' +
-      '<p><b>Золотой Рог</b> = Запад × 0,8 + 20 (цепь) + 15 (флот Лоредана) + 8 (критяне) − 62</p>' +
+      '<p><b>Золотой Рог</b> = Запад × 0,8 + 20 (цепь) + 15 (венецианские галеры) + 10 (Лоредан охраняет гавань) + 8 (критяне) − 62</p>' +
       '<p><b>Подкопы</b> = гарнизон ÷ 100 + 25 (Грант; 12, если опоздал) − 82</p>' +
       '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (рыцари) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 50) − 110</p>' +
       '<p>К каждому этапу добавляется случайность: ±15, у штурма ±20. Этап удался, если вышло 0 или больше. Каждый удачный этап из первых трёх даёт штурму +6.</p>' +
-      '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие.</p>' +
+      '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +10 (поправка на округление указов).</p>' +
       '<p>Перед осадой Морея 60+ присылает 500 воинов, Морея 100 — 1000.</p></div>';
     return '<div class="overlay"><div class="modal"><div class="kicker">⚙ Только для автора</div><h2>📋 Справочник</h2>' +
       '<p style="font-size:13.5px;color:var(--muted)">Всего событий: ' + (G.HIST.length + G.ALLY_EVENTS.length + G.RANDOM.length) +
-      '. Эффекты показаны для нынешнего положения дел. В «Сказании» указы делятся на два хода, события — нет. За ход — не больше двух событий, кроме сюжетных, которые не могут ждать.</p>' +
+      '. Случайные события не приходят в первый ход; дальше случайное событие выпадает, если в ходу меньше двух событий; из доступных выбирается по весу. Эффекты показаны для нынешнего положения дел. В «Сказании» указы делятся на два хода, события — нет. За ход — не больше двух событий, кроме сюжетных, которые не могут ждать.</p>' +
       formula + body + '<div class="row"><button class="btn ghost" data-a="dev">← Назад</button><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
   }
   if (popup === 'rewind' && rewindTarget !== null) {
