@@ -76,7 +76,7 @@ h1,h2,h3{font-weight:normal;margin:0;color:var(--gold2);letter-spacing:.02em}
 .chip.b{color:var(--bad);border-color:#6a2f2f}
 
 /* Нижняя панель */
-.footer{position:fixed;left:0;right:0;bottom:0;background:rgba(20,11,28,.96);border-top:1px solid var(--line);
+.footer{position:fixed;left:0;right:0;bottom:0;background:#150c1e;box-shadow:0 -6px 18px rgba(0,0,0,.45);border-top:1px solid var(--line);
   padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:5}
 .footer .in{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .footer .info{font-size:14px;color:var(--muted)}
@@ -122,6 +122,56 @@ details.log summary{cursor:pointer;color:var(--gold2);font-size:17px}
 .help p,.help li{font-size:15px}
 .help ul{padding-left:20px;margin:6px 0 10px}
 
+/* Правители */
+.rulers{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.ruler{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px 12px;font-size:13.5px;color:var(--muted)}
+.ruler b{display:block;color:var(--gold2);font-weight:normal;font-size:15.5px}
+.ruler i{color:var(--gold);font-style:normal}
+.ruler.enemy{border-color:#5e2a2a}
+
+/* Подсказки к ресурсам */
+.stat{cursor:help}
+.stat .tip{display:none;position:absolute;top:calc(100% + 6px);left:0;width:250px;max-width:80vw;z-index:4;
+  background:#120a18;border:1px solid var(--gold);border-radius:10px;padding:8px 10px;font-size:13px;color:var(--text);
+  box-shadow:0 6px 20px rgba(0,0,0,.5);line-height:1.4}
+.stat.open .tip{display:block}
+@media (hover:hover){.stat:hover .tip{display:block}}
+.stat .info{font-size:11px;color:var(--muted);opacity:.7}
+.stats .stat:nth-child(4n+3) .tip,.stats .stat:nth-child(4n+4) .tip{left:auto;right:0}
+@media (min-width:960px){
+  .stats .stat .tip{left:0;right:auto}
+  .stats .stat:nth-child(n+5) .tip{left:auto;right:0}
+}
+
+/* Отложенное событие */
+.pending{display:flex;align-items:center;justify-content:space-between;gap:10px;border-color:var(--gold);background:#2d1b3a}
+.pending .btn{padding:7px 14px;font-size:15px;white-space:nowrap}
+
+/* Прогноз казны */
+.fc{font-size:14.5px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.fc b{color:var(--text);font-weight:normal}
+.fc .p{color:var(--good)} .fc .m{color:var(--bad)}
+.fc .res{color:var(--gold2);font-size:18px}
+.fc .res.neg{color:var(--bad)}
+.fc small{font-size:12.5px}
+.sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+/* Выбор сложности и вступление */
+.diffs{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.diff{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left}
+.diff:hover{border-color:var(--gold)}
+.diff .t{display:block;color:var(--gold2);font-size:18px}
+.diff .d{display:block;font-size:14px;color:var(--muted)}
+.diff.main{border-color:var(--gold)}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--gold)}
+.intro p{text-align:left}
+.intro ul{text-align:left;padding-left:20px;margin:6px 0 10px}
+.intro li{margin-bottom:6px;font-size:15px}
+.icon-btn{background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--muted)}
+.icon-btn:hover{border-color:var(--gold);color:var(--gold2)}
+
 @media (max-width:600px){
   body{font-size:15px}
   .wrap{padding:10px 16px 120px}
@@ -135,6 +185,10 @@ details.log summary{cursor:pointer;color:var(--gold2);font-size:17px}
   .modal h2{font-size:21px}
   .footer .in{flex-direction:column;align-items:stretch;gap:6px}
   .footer .btn{width:100%}
+  .rulers{grid-template-columns:1fr}
+  .ruler{padding:6px 10px;font-size:12.5px}
+  .ruler b{font-size:14.5px}
+  .fc{font-size:13.5px}
 }
 </style>
 </head>
@@ -204,12 +258,27 @@ function dateLabel(t) {
 }
 function yearOf(t) { return 1444 + Math.floor(t / 2); }
 
-function income(s) { return 16 + Math.round(s.morea / 5) + s.incomeMod; }
+// ---------- Сложность и правители ----------
+var DIFFS = {
+  dream:     { name: 'Сон',        icon: '☁️', desc: 'Для знакомства с эпохой: больше золота, султан терпеливее, осада легче.', gold: 15, income: 2, threat: -1, siege: 0 },
+  reality:   { name: 'Реальность', icon: '⚖️', desc: 'Задуманный баланс: победить трудно, но возможно.', gold: 0, income: 0, threat: 0, siege: 0 },
+  nightmare: { name: 'Кошмар',     icon: '🔥', desc: 'Казна пуста, Мехмед нетерпелив. Для тех, кто уже побеждал.', gold: -10, income: -1, threat: 1, siege: 0 }
+};
+function D(s) { return DIFFS[s.diff] || DIFFS.reality; }
+
+var RULERS = {
+  'Иоанн VIII':    { icon: '👑', title: 'Император-дипломат', desc: 'Ездил во Флоренцию ради унии. Посольства на Запад дают +2 к помощи Запада.' },
+  'Константин XI': { icon: '⚔️', title: 'Император-воин', desc: 'Бывший деспот Мореи, храбрый полководец. Ремонт стен даёт +3, наёмники — +100 воинов.' },
+  'Мурад II':      { icon: '🌙', title: 'Осторожный султан', desc: 'Устал от войн и дважды уступал трон сыну. Угроза растёт медленно, дань ценит.' },
+  'Мехмед II':     { icon: '🔥', title: 'Султан-завоеватель', desc: 'Молод, честолюбив и одержим Константинополем. Угроза растёт быстро, дань ценит меньше.' }
+};
+
+function income(s) { return 16 + Math.round(s.morea / 5) + s.incomeMod + D(s).income; }
 function upkeep(s) { return Math.round(s.garrison / 1000 * 3); }
 function threatGrowth(s) {
   var g = s.flags.mehmed ? 5 : 3;
   if (s.flags.rumeli) g += 1;
-  return g;
+  return Math.max(1, g + D(s).threat);
 }
 
 // ---------- Действия ----------
@@ -217,15 +286,15 @@ var ACTIONS = [
   { id: 'walls', icon: '🧱', name: 'Чинить стены',
     desc: 'Каменщики латают Феодосиевы стены — тройную линию укреплений длиной 6 км.',
     cost: function () { return 15; },
-    eff: function () { return { walls: 9 }; } },
+    eff: function (s) { return { walls: s.flags.constantine ? 12 : 9 }; } },
   { id: 'mercs', icon: '🗡️', name: 'Нанять наёмников',
     desc: 'Итальянские и каталонские отряды. Каждая тысяча воинов стоит 3 золотых за полугодие.',
     cost: function () { return 20; },
-    eff: function () { return { garrison: 500 }; } },
+    eff: function (s) { return { garrison: s.flags.constantine ? 600 : 500 }; } },
   { id: 'embassy', icon: '📜', name: 'Посольство на Запад',
     desc: 'Послы едут в Рим, Венецию и Буду. Султан следит за этим с подозрением.',
     cost: function () { return 10; },
-    eff: function (s) { return { west: s.flags.varnaLost ? 6 : 8, threat: 2 }; } },
+    eff: function (s) { return { west: (s.flags.varnaLost ? 6 : 8) + (s.flags.constantine ? 0 : 2), threat: 2 }; } },
   { id: 'union', icon: '✝️', name: 'Продвигать унию',
     desc: 'Поддержать Флорентийскую унию 1439 г. с католической церковью. Запад доволен, горожане — нет.',
     cost: function () { return 0; },
@@ -255,47 +324,50 @@ function opt(text, eff, extra) { var o = { text: text, eff: eff || {} }; if (ext
 
 var HIST = [
   { id: 'varna', turn: 1, kicker: 'Ноябрь 1444', title: 'Битва при Варне',
-    text: '10 ноября 1444 года армия крестоносцев разбита султаном Мурадом II у Варны. Король Польши и Венгрии Владислав III погиб, Янош Хуньяди едва спасся. Надежды на освобождение руками Запада рухнули.',
-    note: 'Варненский поход был ответом Запада на Флорентийскую унию. Больше крупных крестовых походов на помощь Византии не было.',
+    text: '10 ноября 1444 года крестоносцы короля Польши и Венгрии Владислава III разбиты султаном Мурадом II у Варны. Король погиб, Янош Хуньяди едва спасся. Тем временем ваш брат, деспот Мореи Константин, пользуясь войной, отстроил Гексамилион и ведёт войска на север — в Беотию и Фессалию.',
+    note: 'Варненский поход был ответом Запада на Флорентийскую унию. А поход Константина 1444–1446 годов стал последним наступлением византийцев в истории: он подчинил герцогство Афинское и дошёл до гор Пинда.',
     options: function () { return [
-      opt('Поздравить султана с победой', { threat: -2, west: -10, unity: -3 }, { result: 'Иоанн VIII действительно отправил Мураду поздравления. Султан доволен, на Западе ропщут.' }),
-      opt('Призвать Запад к новому походу', { threat: 8, west: 2, gold: -5 }, { result: 'Ваши письма читают в Риме, а копии — при дворе султана.' }),
-      opt('Хранить молчание', { threat: 5, west: -6 }, { result: 'Империя затаилась.' })
+      opt('Поздравить султана с победой', { threat: -5, west: -6 }, { result: 'Иоанн VIII действительно отправил Мураду поздравления. Султан доволен, на Западе ропщут.' }),
+      opt('Поддержать поход Константина на север', { gold: 8, morea: 10, threat: 6 }, { fn: function (s) { s.flags.thessaly = true; }, result: 'Герцог Афинский признал себя данником деспота, фессалийские горцы присягнули Константину. Но Мурад этого не забудет.' }),
+      opt('Призвать Запад к новому походу', { west: 5, threat: 5, gold: -5 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Не хватает золота', result: 'Ваши письма читают в Риме, а копии — при дворе султана.' })
     ]; },
     fn: function (s) { s.flags.varnaLost = true; } },
 
   { id: 'hexamilion', turn: 5, kicker: 'Декабрь 1446', title: 'Пушки у Гексамилиона',
-    text: function (s) { return 'Мурад II с большим войском подошёл к Гексамилиону — стене через Коринфский перешеек, прикрывающей Морею. ' + (s.morea >= 60 ? 'Благодаря вашим заботам гарнизоны Мореи сильны.' : 'Укрепления Мореи слабы, деспоты в растерянности.'); },
+    text: function (s) {
+      return (s.flags.thessaly ? 'Мурад II пришёл мстить за поход Константина в Фессалию. ' : 'Мурад II с большим войском подошёл к Морее. ') +
+        'На его пути — Гексамилион, стена через Коринфский перешеек. ' + (s.morea >= 60 ? 'Благодаря вашим заботам гарнизоны Мореи сильны.' : 'Укрепления Мореи слабы, деспоты в растерянности.');
+    },
     note: 'Османские пушки разрушили Гексамилион за несколько дней. Морея была разорена, а деспот Константин — будущий император — признал себя данником султана.',
-    options: function (s) { var strong = s.morea >= 60; return [
-      opt('Откупиться данью', { gold: -15, morea: strong ? -3 : -8, threat: -3 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Нужно 15 золота' }),
-      opt('Защищать стену до конца', strong ? { morea: -6, garrison: -200 } : { morea: -22, garrison: -300, threat: 3 },
+    options: function (s) { var strong = s.morea >= 60, rev = s.flags.thessaly ? 4 : 0; return [
+      opt('Откупиться данью', { gold: -15, morea: (strong ? -3 : -8) - rev, threat: -3 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Не хватает золота' }),
+      opt('Защищать стену до конца', strong ? { morea: -6 - rev, garrison: -200 } : { morea: -22 - rev, garrison: -300, threat: 3 },
         { result: strong ? 'Стена пала, но армия Мореи отступила в порядке.' : 'Стена пала. Турки угнали в рабство тысячи жителей Мореи.' })
     ]; } },
 
   { id: 'kosovo', turn: 9, kicker: 'Октябрь 1448', title: 'Вторая битва на Косовом поле',
-    text: 'Янош Хуньяди с венгерским войском снова выступил против турок и был разбит на Косовом поле после трёхдневной битвы.',
+    text: 'Янош Хуньяди с венгерским войском снова выступил против турок и был разбит на Косовом поле после трёхдневной битвы. Уцелевшие воины бегут на юг.',
     note: 'Это была последняя крупная попытка христианских государств остановить османов на Балканах до падения Константинополя.',
     options: function () { return [
-      opt('Принять беглецов из армии Хуньяди', { garrison: 200, gold: -5, west: -4, threat: 4 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Нужно 5 золота' }),
-      opt('Закрыть ворота', { west: -6, threat: 3 })
+      opt('Приютить уцелевших воинов', { garrison: 200, gold: -5, west: 4, threat: 3 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Не хватает золота', result: 'Венгры и валахи благодарны. О вашем милосердии узнают в Буде и в Риме.' }),
+      opt('Закрыть ворота', { west: -4 })
     ]; } },
 
   { id: 'john_death', turn: 9, kicker: 'Октябрь 1448', title: 'Смерть Иоанна VIII',
-    text: '31 октября 1448 года умер бездетный император Иоанн VIII. Трон переходит к его брату Константину, деспоту Мореи. Как короновать нового василевса — по-гречески или с признанием унии?',
+    text: '31 октября 1448 года умер бездетный император Иоанн VIII — осторожный дипломат, ездивший во Флоренцию ради унии. Трон переходит к его брату Константину, деспоту Мореи, — храброму воину, но небогатому правителю. Как короновать нового василевса?',
     note: 'Константин XI так и не был коронован в Святой Софии: любая церемония превратилась бы в скандал вокруг унии. Его венчали в Мистре в январе 1449 года.',
     options: function () { return [
-      opt('Короноваться в Мистре, без патриарха', { unity: -3, morea: 5 }, { result: 'Так было и в истории. Обе партии недовольны, но не слишком.' }),
-      opt('Публично отречься от унии', { unity: 14, west: -15 }),
-      opt('Подтвердить верность унии', { west: 10, unity: -10 })
+      opt('Короноваться в Мистре, без патриарха', { unity: -3, morea: 5 }, { result: 'Так было и в истории. Обе партии недовольны, но не слишком. Теперь стены и наёмники обходятся вам выгоднее.' }),
+      opt('Публично отречься от унии', { unity: 14, west: -15 }, { result: 'Город ликует. В Риме — ледяное молчание.' }),
+      opt('Подтвердить верность унии', { west: 10, unity: -10 }, { result: 'Папа доволен. Монахи на улицах проклинают «латинского царя».' })
     ]; },
     fn: function (s) { s.ruler = 'Константин XI'; s.flags.constantine = true; } },
 
   { id: 'murad_death', turn: 14, kicker: 'Февраль 1451', title: 'Смерть Мурада II',
-    text: 'Султан Мурад II, осторожный и уставший от войн, умер в Адрианополе. Престол занял его 19-летний сын Мехмед II. О нём говорят, что он мечтает лишь об одном — о Константинополе.',
-    note: 'Молодого Мехмеда на Западе считали неопытным юнцом. Это была роковая ошибка.',
+    text: 'Султан Мурад II, осторожный и уставший от войн, умер в Адрианополе. Престол занял его 19-летний сын Мехмед II. Говорят, он ночами чертит планы стен Константинополя.',
+    note: 'Молодого Мехмеда на Западе считали неопытным юнцом. Это была роковая ошибка: с этого момента угроза растёт быстрее, а дань действует слабее.',
     options: function () { return [
-      opt('Отправить поздравительное посольство', { gold: -10, threat: 7 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Нужно 10 золота', result: 'Мехмед принял послов любезно и поклялся соблюдать мир. Пока.' }),
+      opt('Отправить поздравительное посольство', { gold: -10, threat: 7 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота', result: 'Мехмед принял послов любезно и поклялся соблюдать мир. Пока.' }),
       opt('Готовиться к худшему', { threat: 12, unity: 4 })
     ]; },
     fn: function (s) { s.sultan = 'Мехмед II'; s.flags.mehmed = true; } },
@@ -304,28 +376,37 @@ var HIST = [
     text: 'В Константинополе живёт Орхан — османский принц и возможный претендент на трон. Султан платит за его содержание. Советники предлагают потребовать удвоить выплаты, намекая, что Орхана можно и отпустить…',
     note: 'Так и поступили послы Константина. Великий визирь Халил-паша ответил: «Глупые греки, мне надоели ваши хитрости!» Мехмед получил повод к войне.',
     options: function () { return [
-      opt('Потребовать удвоить выплаты', { gold: 12, threat: 12 }, { result: 'Деньги пришли. Вместе с ними — ледяное письмо султана.' }),
+      opt('Потребовать больше денег', { gold: 12, threat: 12 }, { result: 'Деньги пришли. Вместе с ними — ледяное письмо султана.' }),
       opt('Не дразнить султана', {}, { result: 'Мудрое решение. Мехмед всё равно найдёт повод — но позже.' })
+    ]; } },
+
+  { id: 'chain', turn: 15, kicker: 'Осень 1451', title: 'Цепь Золотого Рога',
+    text: 'Огромная цепь на деревянных поплавках может перекрыть вход в гавань Золотой Рог. Но она проржавела, а поплавки сгнили. Мастера готовы взяться за работу.',
+    note: 'В 1453 году турецкий флот так и не прорвал цепь — Мехмед приказал перетащить корабли посуху, на смазанных жиром брёвнах. Без цепи флот вошёл бы в гавань сразу.',
+    options: function () { return [
+      opt('Починить цепь', { gold: -10 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.chain = true; }, result: 'Цепь натянута между башней Евгения и Галатой. Гавань под защитой.' }),
+      opt('Обойдёмся', {}, { result: 'Гавань открыта. В осаде это может дорого обойтись.' })
     ]; } },
 
   { id: 'rumeli', turn: 16, kicker: 'Весна 1452', title: 'Крепость Румелихисар',
     text: 'Мехмед II строит на европейском берегу Босфора, в самом узком месте пролива, мощную крепость. Её пушки перекроют путь кораблям с Чёрного моря — а значит, хлебу и торговле.',
     note: 'Турки называли её «Богаз-кесен» — «Перерезающая горло». Крепость построили всего за четыре с половиной месяца.',
     options: function () { return [
-      opt('Отправить протест и подарки строителям', { gold: -8, threat: 5 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Нужно 8 золота', result: 'Султан ответил: «Всё, что за стенами города, — моё».' }),
-      opt('Арестовать турок в городе', { unity: 6, threat: 12 }, { result: 'Константин так и сделал — и через три дня отпустил их. Дипломатия рухнула.' }),
-      opt('Молча готовиться к войне', { threat: 8, walls: 2 })
+      opt('Отправить султану протест', { threat: 8, unity: 3, income: -5 }, { result: 'Султан ответил: «Всё, что за стенами города, — моё».' }),
+      opt('Тайно мешать строительству', { gold: -15, threat: 2, income: -2 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Не хватает золота',
+        result: 'Подкупленные десятники путают чертежи, обозы с известью «теряются». Крепость построят, но часть кораблей будет прорываться.' }),
+      opt('Арестовать турок в городе', { unity: 6, threat: 12, income: -5 }, { result: 'Константин так и сделал — и через три дня отпустил их. Дипломатия рухнула.' })
     ]; },
-    fn: function (s) { s.flags.rumeli = true; s.incomeMod -= 5; } },
+    fn: function (s) { s.flags.rumeli = true; } },
 
   { id: 'urban', turn: 17, kicker: 'Лето 1452', title: 'Пушечный мастер Урбан',
-    text: function (s) { return 'Ко двору явился венгерский литейщик Урбан. Он берётся отлить пушки, способные разбить любые стены, и просит щедрое жалованье — 40 золотых. В казне сейчас ' + s.gold + '.'; },
+    text: 'Ко двору явился венгерский литейщик Урбан. Он берётся отлить пушки, способные разбить любые стены, и просит щедрое жалованье.',
     note: 'Константин не смог платить Урбану даже скромное жалованье. Мехмед заплатил вчетверо больше — и получил бомбарду длиной 8 метров, метавшую ядра весом более полутонны.',
     options: function () { return [
-      opt('Нанять Урбана за 40 золотых', { gold: -40 }, { req: function (s) { return s.gold >= 40; }, reqText: 'Нужно 40 золота',
+      opt('Нанять Урбана на его условиях', { gold: -40 }, { req: function (s) { return s.gold >= 40; }, reqText: 'Не хватает золота',
         fn: function (s) { s.flags.urbanHired = true; return 'Урбан остаётся в городе. Его пушки встанут на стенах, а не против них.'; } }),
-      opt('Предложить половину — 20 золотых', { gold: -20 }, { req: function (s) { return s.gold >= 20; }, reqText: 'Нужно 20 золота',
-        fn: function (s) { if (rnd(s) < 0.4) { s.flags.urbanHired = true; return 'Урбан поворчал, но согласился!'; } s.flags.urbanOttoman = true; s.gold += 10; return 'Урбан взял задаток в 10 золотых и сбежал к султану.'; } }),
+      opt('Поторговаться', { gold: -20 }, { req: function (s) { return s.gold >= 20; }, reqText: 'Не хватает золота',
+        fn: function (s) { if (rnd(s) < 0.4) { s.flags.urbanHired = true; return 'Урбан поворчал, но согласился!'; } s.flags.urbanOttoman = true; s.gold += 10; return 'Урбан взял половину задатка и сбежал к султану.'; } }),
       opt('Отказать: казна не выдержит', {}, { fn: function (s) { s.flags.urbanOttoman = true; return 'Урбан уехал в Адрианополь. Скоро он отольёт для Мехмеда чудовищную пушку.'; } })
     ]; } },
 
@@ -341,28 +422,33 @@ var HIST = [
   { id: 'giustiniani', turn: 18, kicker: 'Январь 1453', title: 'Джованни Джустиниани',
     text: function (s) {
       if (s.west >= 50) return 'В гавань вошли две генуэзские галеры. Знаменитый кондотьер Джованни Джустиниани Лонго привёл 700 отборных латников — за свой счёт, ради славы.';
-      if (s.west >= 30) return 'Генуэзский кондотьер Джованни Джустиниани Лонго готов прийти на помощь с 700 воинами, но просит 30 золотых на снаряжение галер.';
+      if (s.west >= 30) return 'Генуэзский кондотьер Джованни Джустиниани Лонго готов прийти на помощь с 700 воинами, но просит денег на снаряжение галер.';
       return 'Генуэзский кондотьер Джованни Джустиниани Лонго собирался в поход, но, видя равнодушие Запада к судьбе города, остался на Хиосе.';
     },
-    note: 'Джустиниани стал душой обороны сухопутных стен. Его тяжёлое ранение в последний день осады стало переломом.',
+    note: 'Джустиниани стал душой обороны сухопутных стен. Его тяжёлое ранение в последний день осады стало переломом. Чтобы он пришёл сам, нужна помощь Запада от 50; от 30 — за плату.',
     options: function (s) {
       if (s.west >= 50) return [opt('Поручить ему оборону сухопутных стен', { garrison: 700, unity: -2 }, { fn: function (s) { s.flags.giustiniani = true; } })];
       if (s.west >= 30) return [
-        opt('Заплатить 30 золотых', { gold: -30, garrison: 700 }, { req: function (s) { return s.gold >= 30; }, reqText: 'Нужно 30 золота', fn: function (s) { s.flags.giustiniani = true; } }),
+        opt('Оплатить снаряжение галер', { gold: -30, garrison: 700 }, { req: function (s) { return s.gold >= 30; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.giustiniani = true; } }),
         opt('Отказаться', {})
       ];
       return [opt('Увы…', {})];
-    } }
+    } },
+
+  { id: 'grant', turn: 18, kicker: 'Январь 1453', title: 'Инженер Иоганн Грант',
+    text: function (s) {
+      return s.flags.giustiniani
+        ? 'В отряде Джустиниани служит инженер Иоганн Грант — мастер подземной войны. Он готов обучить ваших людей вести контрподкопы за скромную плату.'
+        : 'В порт прибыл инженер Иоганн Грант, немец (а может, шотландец), мастер подземной войны. Он готов служить городу, но просит хорошее жалованье.';
+    },
+    note: 'В 1453 году Грант обнаружил и уничтожил все 14 турецких подкопов, выкуривая минёров дымом и встречая их под землёй с оружием в руках.',
+    options: function (s) { var price = s.flags.giustiniani ? 8 : 15; return [
+      opt('Нанять Гранта', { gold: -price }, { req: function (s) { return s.gold >= price; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.grant = true; } }),
+      opt('Обойдёмся', {})
+    ]; } }
 ];
 
 var RANDOM = [
-  { id: 'plague', rep: true, w: 3, title: 'Чума в городе',
-    text: 'В портовых кварталах снова появилась «чёрная смерть». Лекари советуют закрыть ворота, священники — молиться.',
-    note: 'Эпидемии чумы возвращались в Константинополь каждые 10–15 лет. К 1453 году в городе жило около 50 тысяч человек — в десять раз меньше, чем в лучшие времена.',
-    options: function () { return [
-      opt('Карантин и лекари', { gold: -8, garrison: -150 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Нужно 8 золота' }),
-      opt('Крестный ход с иконой Одигитрии', { unity: 5, garrison: -400 })
-    ]; } },
   { id: 'galata', w: 2, title: 'Генуэзцы Галаты',
     text: 'Подеста Галаты — генуэзской колонии напротив города — просит снизить пошлины для своих купцов. Взамен обещает заём и дружбу Генуи.',
     note: 'Галата забирала большую часть торговли проливов. В 1453 году она объявила нейтралитет, хотя многие генуэзцы тайно сражались на стенах.',
@@ -374,7 +460,7 @@ var RANDOM = [
     text: 'Венецианский байло предлагает заём под залог доходов от таможни.',
     note: 'Византия была в долгах у Венеции ещё с XIV века — венецианцы даже держали в залоге коронные драгоценности империи.',
     options: function () { return [
-      opt('Взять 30 золотых', { gold: 30, income: -2, west: 2 }),
+      opt('Взять заём', { gold: 30, income: -2, west: 2 }),
       opt('Отказаться', {})
     ]; } },
   { id: 'athos', w: 2, title: 'Голос Святой Горы',
@@ -384,54 +470,70 @@ var RANDOM = [
       opt('Почтить старцев', { unity: 7, west: -5 }),
       opt('Сделать им выговор', { unity: -6, west: 4 })
     ]; } },
-  { id: 'morea_quarrel', rep: true, w: 1.5, cond: function (s) { return s.t >= 3; }, title: 'Ссора деспотов Мореи',
-    text: 'Братья императора, деспоты Фома и Димитрий, снова делят земли Мореи. Дело идёт к междоусобице.',
-    note: 'Ссоры Фомы и Димитрия не прекращались до самого конца. В 1460 году Мехмед просто забрал Морею себе.',
+  { id: 'morea_quarrel', w: 1.5, cond: function (s) { return s.t >= 3; }, title: 'Ссора деспотов Мореи',
+    text: 'Братья императора, деспоты Фома и Димитрий, делят земли Мореи. Дело идёт к междоусобице.',
+    note: 'Фома тяготел к латинянам, Димитрий — к туркам. Их ссоры не прекращались до самого конца.',
     options: function () { return [
-      opt('Примирить братьев дарами', { gold: -10, morea: 8 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Нужно 10 золота' }),
+      opt('Примирить братьев дарами', { gold: -10, morea: 8 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
       opt('Поддержать Фому, друга латинян', { west: 4, morea: -6 }),
       opt('Пусть разбираются сами', { morea: -10 })
+    ]; } },
+  { id: 'demetrios', w: 2, cond: function (s) { return s.used.morea_quarrel && s.t >= 8; }, title: 'Димитрий ищет защиты у султана',
+    text: 'Деспот Димитрий, обиженный на брата, тайно отправил послов к султану: он готов стать его верным вассалом в обмен на поддержку против Фомы.',
+    note: 'Так и случилось: Димитрий опирался на турок, а в 1460 году сдал Мехмеду свою часть Мореи и доживал жизнь при дворе султана.',
+    options: function () { return [
+      opt('Отдать Димитрию лучшие земли', { morea: -5, threat: -5, unity: -3 }, { result: 'Димитрий доволен, султан тоже. Морея слабеет.' }),
+      opt('Пригрозить Димитрию судом', { morea: 4, threat: 6 }),
+      opt('Перекупить его советников', { gold: -12, morea: 6 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота' })
     ]; } },
   { id: 'skanderbeg', w: 2, cond: function (s) { return s.t <= 14; }, title: 'Скандербег',
     text: 'Албанский князь Георгий Кастриоти по прозвищу Скандербег восстал против султана и громит его армии в горах. Он просит денег.',
     note: 'Скандербег воевал с османами 25 лет и не проиграл почти ни одной битвы. Его отвлекающие удары дорого стоили Мураду II.',
     options: function () { return [
-      opt('Отправить 12 золотых', { gold: -12, threat: -6 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Нужно 12 золота' }),
+      opt('Тайно помочь золотом', { gold: -12, threat: -6 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота' }),
       opt('Ограничиться письмом', { west: 1 })
     ]; } },
-  { id: 'earthquake', rep: true, w: 1.5, title: 'Землетрясение',
+  { id: 'earthquake', w: 1.5, title: 'Землетрясение',
     text: 'Ночью землю тряхнуло. В стенах у Влахерн и Золотых ворот появились трещины.',
     note: 'Феодосиевы стены пережили десятки землетрясений; после самого страшного, в 447 году, их восстановили всего за 60 дней.',
     options: function () { return [
-      opt('Немедленно чинить', { gold: -10, walls: -2 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Нужно 10 золота' }),
+      opt('Немедленно чинить', { gold: -10, walls: -2 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
       opt('Отложить ремонт', { walls: -8 })
     ]; } },
-  { id: 'harvest', rep: true, w: 2, title: 'Богатый урожай',
+  { id: 'harvest', w: 2, title: 'Богатый урожай',
     text: 'Сады и поля внутри стен и во Фракии дали щедрый урожай.',
     note: 'Внутри стен Константинополя к XV веку было столько пустырей, что там выращивали хлеб и виноград.',
     options: function () { return [
       opt('Продать излишки', { gold: 10 }),
       opt('Раздать хлеб бедным', { unity: 6 })
     ]; } },
-  { id: 'fire', rep: true, w: 1.5, title: 'Пожар',
+  { id: 'fire', w: 1.5, title: 'Пожар в гавани',
     text: 'Пожар уничтожил квартал у гавани. Сотни семей остались без крова.',
     note: 'Деревянные дома и узкие улицы делали пожары бичом средневекового Константинополя.',
     options: function () { return [
-      opt('Помочь погорельцам', { gold: -8, unity: 3 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Нужно 8 золота' }),
+      opt('Помочь погорельцам', { gold: -8, unity: 4 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' }),
       opt('Не до того', { unity: -5 })
     ]; } },
-  { id: 'unpaid', rep: true, w: 2, cond: function (s) { return s.garrison >= 5000; }, title: 'Наёмники требуют денег',
+  { id: 'fire2', w: 1.5, cond: function (s) { return s.used.fire && s.t >= 6; }, title: 'Пожар на венецианских складах',
+    text: 'Сгорели склады венецианских купцов. Байло подозревает поджог и требует возмещения, а в городе шепчутся, что «латиняне сами подожгли ради страховки».',
+    note: 'Венецианцы жили в городе своим кварталом со своими законами. В 1453 году они сражались на стенах наравне с греками.',
+    options: function () { return [
+      opt('Возместить убытки', { gold: -10, west: 5 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
+      opt('Обвинить самих венецианцев', { unity: 4, west: -6 }),
+      opt('Назначить расследование', { unity: -2, west: 1 })
+    ]; } },
+  { id: 'unpaid', w: 2, cond: function (s) { return s.garrison >= 5000; }, title: 'Наёмники требуют денег',
     text: 'Капитаны наёмных отрядов собрались у Влахернского дворца: жалованье задерживают, а турецкие вербовщики платят щедро.',
     note: 'Наёмники верны тому, кто платит. Генуэзцы, венецианцы и каталонцы в 1453 году, впрочем, сражались отважно.',
     options: function () { return [
-      opt('Выплатить премию', { gold: -12 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Нужно 12 золота' }),
+      opt('Выплатить премию', { gold: -12 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота' }),
       opt('Отказать', { garrison: -500, unity: -3 })
     ]; } },
-  { id: 'envoy', rep: true, w: 2, title: 'Посол султана',
+  { id: 'envoy', w: 2, title: 'Посол султана',
     text: 'Османский посол прибыл с упрёками: греки якобы привечают врагов султана и шпионят в его владениях.',
     note: 'Византия формально была вассалом османов с конца XIV века и платила им дань.',
     options: function () { return [
-      opt('Задобрить подарками', { gold: -10, threat: -6 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Нужно 10 золота' }),
+      opt('Задобрить подарками', { gold: -10, threat: -6 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
       opt('Гордо отвергнуть упрёки', { threat: 6, unity: 4 })
     ]; } },
   { id: 'pope', w: 2, cond: function (s) { return s.t >= 6; }, title: 'Послание папы Николая V',
@@ -449,25 +551,11 @@ var RANDOM = [
       opt('Знатная венецианка', { west: 8, unity: -4 }),
       opt('Не до свадеб', {})
     ]; } },
-  { id: 'grant', w: 3, cond: function (s) { return s.t >= 15; }, title: 'Инженер Иоганн Грант',
-    text: 'Немецкий (или шотландский) инженер Иоганн Грант, служащий Джустиниани, предлагает обучить людей вести контрподкопы.',
-    note: 'В 1453 году Грант обнаружил и уничтожил все 14 турецких подкопов под стенами, выкуривая минёров дымом и греческим огнём.',
-    options: function () { return [
-      opt('Нанять за 15 золотых', { gold: -15 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Нужно 15 золота', fn: function (s) { s.flags.grant = true; } }),
-      opt('Обойдёмся', {})
-    ]; } },
-  { id: 'chain', w: 3, cond: function (s) { return s.t >= 12; }, title: 'Цепь Золотого Рога',
-    text: 'Огромная цепь на деревянных поплавках может перекрыть вход в гавань Золотой Рог. Но она проржавела, а поплавки сгнили.',
-    note: 'В 1453 году турецкий флот так и не прорвал цепь — Мехмед приказал перетащить корабли посуху, на смазанных жиром брёвнах.',
-    options: function () { return [
-      opt('Починить цепь за 10 золотых', { gold: -10 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Нужно 10 золота', fn: function (s) { s.flags.chain = true; } }),
-      opt('Позже', {})
-    ]; } },
   { id: 'catalans', w: 2, title: 'Каталонский отряд',
-    text: 'Капитан каталонских моряков Педро Хулиа предлагает свой отряд за умеренную плату.',
-    note: 'Каталонский консул Пере Жулиа сражался в 1453 году у стен и был казнён вместе с сыновьями после падения города.',
+    text: 'Каталонский консул Пере Жулиа предлагает отряд своих моряков за умеренную плату.',
+    note: 'Пере Жулиа сражался в 1453 году у стен и был казнён вместе с сыновьями после падения города.',
     options: function () { return [
-      opt('Нанять за 14 золотых', { gold: -14, garrison: 400 }, { req: function (s) { return s.gold >= 14; }, reqText: 'Нужно 14 золота' }),
+      opt('Нанять каталонцев', { gold: -14, garrison: 400 }, { req: function (s) { return s.gold >= 14; }, reqText: 'Не хватает золота' }),
       opt('Отказать', {})
     ]; } },
   { id: 'church_silver', w: 2, cond: function (s) { return s.t >= 12; }, title: 'Церковное серебро',
@@ -488,28 +576,28 @@ var RANDOM = [
     text: 'Регент Венгрии Янош Хуньяди готовит новый поход против турок и просит золото на наёмников.',
     note: 'Хуньяди был самым опасным противником османов. В 1456 году он отстоял Белград от самого Мехмеда II.',
     options: function () { return [
-      opt('Помочь 15 золотыми', { gold: -15, threat: -8, west: 4 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Нужно 15 золота' }),
+      opt('Помочь золотом', { gold: -15, threat: -8, west: 4 }, { req: function (s) { return s.gold >= 15; }, reqText: 'Не хватает золота' }),
       opt('Пожелать удачи', {})
     ]; } },
   { id: 'bessarion', w: 2, title: 'Кардинал Виссарион',
     text: 'Бывший митрополит Никейский, а ныне католический кардинал Виссарион хлопочет в Риме за родной город. Ему нужны деньги на подарки курии.',
     note: 'Виссарион перевёз в Италию огромную библиотеку греческих рукописей. Она стала основой венецианской библиотеки Марчиана.',
     options: function () { return [
-      opt('Отправить 6 золотых', { gold: -6, west: 7 }, { req: function (s) { return s.gold >= 6; }, reqText: 'Нужно 6 золота' }),
+      opt('Поддержать его хлопоты', { gold: -6, west: 7 }, { req: function (s) { return s.gold >= 6; }, reqText: 'Не хватает золота' }),
       opt('Не сейчас', {})
     ]; } },
-  { id: 'famine', rep: true, w: 1.5, title: 'Неурожай во Фракии',
+  { id: 'famine', w: 1.5, title: 'Неурожай во Фракии',
     text: 'Засуха погубила урожай. Цены на хлеб в городе выросли втрое.',
     note: 'Город зависел от подвоза хлеба морем — из Мореи и черноморских портов.',
     options: function () { return [
-      opt('Закупить хлеб в Кафе', { gold: -10 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Нужно 10 золота' }),
+      opt('Закупить хлеб в Кафе', { gold: -10 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
       opt('Пусть рынок решит', { unity: -7 })
     ]; } },
-  { id: 'pirates', rep: true, w: 1.2, title: 'Пираты в Мраморном море',
+  { id: 'pirates', w: 1.2, title: 'Пираты в Мраморном море',
     text: 'Пираты захватили два торговых судна. Купцы требуют охрану.',
     note: 'От некогда грозного византийского флота к XV веку осталось лишь несколько кораблей.',
     options: function () { return [
-      opt('Снарядить галеру', { gold: -6, unity: 2 }, { req: function (s) { return s.gold >= 6; }, reqText: 'Нужно 6 золота' }),
+      opt('Снарядить галеру', { gold: -6, unity: 2 }, { req: function (s) { return s.gold >= 6; }, reqText: 'Не хватает золота' }),
       opt('Смириться с потерями', { gold: -3, unity: -2 })
     ]; } },
   { id: 'scholarius', w: 2, cond: function (s) { return s.t >= 10; }, title: 'Проповедь Геннадия',
@@ -518,6 +606,14 @@ var RANDOM = [
     options: function () { return [
       opt('Запретить проповеди', { unity: -6, west: 3 }),
       opt('Не вмешиваться', { unity: 2, west: -2 })
+    ]; } },
+  { id: 'plethon', w: 2, cond: function (s) { return s.t <= 14; }, title: 'Философ из Мистры',
+    text: 'Старый философ Георгий Гемист Плифон, учёный муж Мистры, предлагает реформы: разделить землю между воинами-крестьянами и укрепить Морею.',
+    note: 'Плифон поразил итальянцев на Флорентийском соборе рассказами о Платоне. Под его влиянием Козимо Медичи основал во Флоренции Платоновскую академию.',
+    options: function () { return [
+      opt('Поддержать реформы в Морее', { gold: -8, morea: 8 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' }),
+      opt('Отправить его учить итальянцев', { west: 4 }),
+      opt('Вежливо отказать', {})
     ]; } }
 ];
 
@@ -529,10 +625,11 @@ function eventById(id) {
 function evText(ev, s) { return typeof ev.text === 'function' ? ev.text(s) : ev.text; }
 
 // ---------- Ход игры ----------
-function newGame(seed) {
+function newGame(seed, diff) {
+  diff = DIFFS[diff] ? diff : 'reality';
   var s = {
-    v: 1, seed: (seed === undefined ? Math.floor(Math.random() * 4294967296) : seed) >>> 0,
-    t: 0, gold: 40, walls: 45, garrison: 4000, west: 25, unity: 60, threat: 25, morea: 40, incomeMod: 0,
+    v: 2, diff: diff, hideEvent: false, seed: (seed === undefined || seed === null ? Math.floor(Math.random() * 4294967296) : seed) >>> 0,
+    t: 0, gold: 40 + DIFFS[diff].gold, walls: 45, garrison: 4000, west: 25, unity: 60, threat: 25, morea: 40, incomeMod: 0,
     ruler: 'Иоанн VIII', sultan: 'Мурад II',
     flags: {}, used: {}, recent: [], queue: [], phase: 'events', chosen: [], log: [],
     lastResult: null, report: null, prev: null, over: null, siege: null, siegeStep: 0
@@ -560,9 +657,10 @@ function pickRandomEvent(s) {
 function startTurn(s) {
   s.queue = [];
   HIST.forEach(function (e) { if (e.turn === s.t) s.queue.push(e.id); });
-  var r = pickRandomEvent(s);
+  var r = s.t > 0 ? pickRandomEvent(s) : null; // первый ход — без событий, чтобы осмотреться
   if (r) { s.queue.push(r.id); s.used[r.id] = true; s.recent.push(r.id); if (s.recent.length > 4) s.recent.shift(); }
   s.chosen = [];
+  s.hideEvent = false;
   s.phase = s.queue.length ? 'events' : 'actions';
 }
 
@@ -584,6 +682,8 @@ function resolveEvent(s, idx) {
   s.lastResult = { title: ev.title, choice: o.text, text: msg, eff: o.eff };
   log(s, '<b>' + ev.title + '.</b> ' + o.text + (msg ? ' — ' + msg : ''));
   s.queue.shift();
+  s.hideEvent = false;
+  while (s.chosen.length && chosenCost(s) > Math.max(0, s.gold)) s.chosen.pop(); // событие могло опустошить казну
   if (!s.queue.length) s.phase = 'actions';
 }
 
@@ -604,7 +704,7 @@ function toggleAction(s, id) {
 }
 
 function endTurn(s) {
-  if (s.phase !== 'actions' || s.chosen.length !== 2) return;
+  if (s.queue.length || s.chosen.length > 2 || (s.phase !== 'actions' && s.phase !== 'events')) return;
   s.prev = snapshot(s);
   var names = [];
   s.chosen.forEach(function (id) {
@@ -624,7 +724,7 @@ function endTurn(s) {
     notes.push('Казна в долгах: ' + lost + ' воинов ушли без жалованья, горожане ропщут.');
   }
   s.report = { inc: inc, upk: upk, tg: tg, decay: 3, notes: notes };
-  log(s, 'Решения полугодия: ' + names.join(' и ') + '.');
+  log(s, names.length ? 'Указы полугодия: ' + names.join(' и ') + '.' : 'Полугодие прошло без новых указов.');
 
   // Проверка поражений
   if (s.gold < -25) return finish(s, 'bankrupt');
@@ -644,11 +744,11 @@ function endTurn(s) {
 function siegeScore(s) {
   // Без случайности — для подсказок и балансировки. Каждое число — запас прочности этапа (больше нуля — успех).
   var f = s.flags;
-  var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) - 55;
-  var naval = s.west * 0.8 + (f.chain ? 20 : 0) - 50;
-  var mines = s.garrison / 100 + (f.grant ? 25 : 0) - 75;
+  var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) - 65;
+  var naval = s.west * 0.8 + (f.chain ? 20 : 0) - 62;
+  var mines = s.garrison / 100 + (f.grant ? 25 : 0) - 82;
   var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? 20 : 0)
-    - Math.max(s.threat, 50) * 0.8 - 66;
+    - Math.max(s.threat, 50) * 0.8 - 88;
   return { bombard: bombard, naval: naval, mines: mines, assault: assault };
 }
 
@@ -661,12 +761,13 @@ function beginSiege(s) {
   var okCount = (m1 >= 0) + (m2 >= 0) + (m3 >= 0);
   var m4 = base.assault + okCount * 6 + r(20);
   var total = Math.round(m1 * 0.5 + m2 * 0.4 + m3 * 0.4 + m4 * 1.2);
+  total += D(s).siege;
   if (f.earlySiege) total -= 10 + (LAST_TURN - s.t) * 10; // досрочная осада: город не готов
   var ending;
   if (total < 0 && f.earlySiege) ending = 'early';
   else if (total < -20) ending = 'fall';
   else if (total < 0) ending = 'heroic';
-  else if (total >= 30 && s.west >= 60 && s.unity >= 35 && m4 >= 0) ending = 'alt';
+  else if (total >= 25 && s.west >= 60 && s.unity >= 30 && m4 >= 0) ending = 'alt';
   else ending = 'repelled';
 
   var stages = [
@@ -690,6 +791,23 @@ function beginSiege(s) {
   s.siege = { stages: stages, total: total, ending: ending };
   s.siegeStep = 0;
   s.phase = 'siege';
+}
+
+// Прогноз казны на начало следующего хода
+function forecast(s) {
+  var c = { gold: s.gold, walls: s.walls, garrison: s.garrison, west: s.west, unity: s.unity, threat: s.threat, morea: s.morea,
+            incomeMod: s.incomeMod, flags: s.flags, diff: s.diff };
+  var cost = 0, gain = 0;
+  s.chosen.forEach(function (id) { var a = actionById(id), e = a.eff(s); cost += a.cost(s); gain += e.gold || 0; applyEff(c, e); });
+  var inc = income(c), upk = upkeep(c);
+  return { now: s.gold, cost: cost, gain: gain, inc: inc, upk: upk, next: s.gold - cost + gain + inc - upk };
+}
+function untilSiege(t) {
+  var m = (LAST_TURN - t) * 6;
+  if (m <= 0) return 'осада этой весной';
+  var y = Math.floor(m / 12), mm = m % 12;
+  var yw = y === 1 ? 'год' : (y >= 2 && y <= 4 ? 'года' : 'лет');
+  return 'до осады ' + (y ? y + ' ' + yw : '') + (y && mm ? ' и ' : '') + (mm ? mm + ' месяцев' : '');
 }
 
 function finish(s, ending) {
@@ -725,6 +843,7 @@ var ENDINGS = {
 
 root.Game = {
   LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   newGame: newGame, dateLabel: dateLabel, yearOf: yearOf, income: income, upkeep: upkeep, threatGrowth: threatGrowth,
   describeEff: describeEff, applyEff: applyEff, currentEvent: currentEvent, evText: evText, optionAvailable: optionAvailable,
   resolveEvent: resolveEvent, toggleAction: toggleAction, canChoose: canChoose, chosenCost: chosenCost,
@@ -733,49 +852,146 @@ root.Game = {
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 
+
 <!-- ============ ИНТЕРФЕЙС ============ -->
 <script>
 (function () {
 'use strict';
 var G = window.Game;
-var SAVE_KEY = 'constantinople-save-v1';
+var SAVE_KEY = 'constantinople-save-v2';
+var SOUND_KEY = 'constantinople-sound';
 var app = document.getElementById('app');
 var S = null;          // текущая партия
-var view = 'title';    // title | game
-var popup = null;      // help | menu | null
+var view = 'title';    // title | setup | intro | game
+var introPage = 0;
+var pendingDiff = 'reality';
+var popup = null;      // help | menu | confirm-new | null
 
 function save() { try { if (S) localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
-function load() { try { var j = localStorage.getItem(SAVE_KEY); return j ? JSON.parse(j) : null; } catch (e) { return null; } }
-function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+function load() {
+  try { var j = localStorage.getItem(SAVE_KEY); var s = j ? JSON.parse(j) : null; return s && s.v === 2 ? s : null; }
+  catch (e) { return null; }
+}
+
+// ---------- Звуки (синтезируются прямо в браузере, без файлов) ----------
+var Sound = (function () {
+  var ctx = null, on = true;
+  try { on = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (e) {}
+  function ac() {
+    if (!on) return null;
+    if (!ctx) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, at, dur, type, vol) {
+    var c = ac(); if (!c) return;
+    var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + (at || 0);
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.1, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function drum(at, vol) {
+    var c = ac(); if (!c) return;
+    var t = c.currentTime + (at || 0), o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+    g.gain.setValueAtTime(vol || 0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.55);
+  }
+  function bell(f, at, vol) { tone(f, at, 1.6, 'sine', vol || 0.09); tone(f * 2.4, at, 0.8, 'sine', (vol || 0.09) * 0.35); tone(f * 3.0, at, 0.4, 'triangle', (vol || 0.09) * 0.15); }
+  return {
+    isOn: function () { return on; },
+    toggle: function () { on = !on; try { localStorage.setItem(SOUND_KEY, on ? 'on' : 'off'); } catch (e) {} if (on) this.click(); },
+    click:  function () { tone(700, 0, 0.06, 'triangle', 0.05); },
+    select: function () { tone(523, 0, 0.12, 'sine', 0.07); tone(784, 0.05, 0.14, 'sine', 0.05); },
+    event:  function () { bell(523, 0); bell(392, 0.35, 0.06); },
+    turn:   function () { tone(294, 0, 0.5, 'triangle', 0.08); tone(392, 0.15, 0.6, 'triangle', 0.08); tone(587, 0.3, 0.8, 'triangle', 0.06); },
+    siege:  function () { drum(0); drum(0.35); drum(0.7, 0.45); },
+    ok:     function () { tone(523, 0, 0.3, 'triangle', 0.08); tone(659, 0.12, 0.3, 'triangle', 0.08); tone(784, 0.24, 0.6, 'triangle', 0.08); },
+    fail:   function () { drum(0, 0.4); tone(196, 0.05, 0.7, 'sawtooth', 0.04); tone(185, 0.3, 0.8, 'sawtooth', 0.035); },
+    win:    function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, i * 0.18, 1.2, 'triangle', 0.08); }); bell(1047, 0.8, 0.07); },
+    lose:   function () { [440, 349, 294, 220].forEach(function (f, i) { tone(f, i * 0.45, 1.3, 'sine', 0.08); }); drum(1.8, 0.3); }
+  };
+})();
 
 function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-function chips(eff, extra) {
-  var list = G.describeEff(eff);
-  var h = (extra || '');
-  list.forEach(function (c) { h += '<span class="chip ' + (c.good ? 'g' : 'b') + '">' + esc(c.text) + '</span>'; });
+function chips(eff) {
+  var h = '';
+  G.describeEff(eff).forEach(function (c) { h += '<span class="chip ' + (c.good ? 'g' : 'b') + '">' + esc(c.text) + '</span>'; });
   return h ? '<div class="chips">' + h + '</div>' : '';
 }
 
-// ---------- Экраны ----------
-function renderTitle() {
-  var saved = load();
-  var canContinue = saved && saved.phase !== 'over';
-  app.innerHTML =
-    '<div class="wrap" style="padding-bottom:30px">' +
-    '<div class="overlay" style="position:static;background:none;min-height:90vh">' +
-    '<div class="modal center">' +
-    '<div class="eagle">☩</div>' +
-    '<div class="kicker">1444 — 1453</div>' +
-    '<h2>Последние годы Константинополя</h2>' +
-    '<p>От великой Римской империи остался лишь один город, окружённый владениями османов. Вы — император ромеев. У вас девять лет, чтобы подготовиться к неизбежной осаде.</p>' +
-    '<p class="note" style="text-align:left">Весной 1453 года султан придёт к стенам. Удержать Константинополь удавалось почти никому — но история ещё не написана.</p>' +
-    '<div class="row">' +
-    (canContinue ? '<button class="btn" data-a="continue">Продолжить</button>' : '') +
-    '<button class="btn ' + (canContinue ? 'ghost' : '') + '" data-a="new">Новая игра</button>' +
-    '<button class="btn ghost" data-a="help">Как играть</button>' +
-    '</div></div></div></div>' + renderPopup();
+// ---------- Подсказки к ресурсам ----------
+var TIPS = {
+  gold: 'Деньги на указы и решения в событиях. Каждые полгода приходит доход (он растёт вместе с Мореей) и уходит жалованье войску. Если долг превысит 25 — банкротство.',
+  walls: 'Феодосиевы стены — главная защита от обстрела и штурма. Каждые полгода ветшают на 3. Важнее всего на этапе «Обстрел стен».',
+  garrison: 'Число воинов в городе. Решает исход подземной войны и генерального штурма. Каждая тысяча стоит 3 золотых за полгода.',
+  west: 'Готовность Запада помочь. Нужна для битвы за Золотой Рог и для прихода Джустиниани (от 50 — сам, от 30 — за плату). Растёт от посольств и унии.',
+  unity: 'Согласие горожан и духовенства. Делает защитников стойкими при штурме. Падает от унии и налогов. Если упадёт до 0 — бунт.',
+  threat: 'Насколько султан готов к войне. Растёт каждые полгода. Чем выше угроза к осаде, тем больше его армия. На 100 султан нападает немедленно.',
+  morea: 'Деспотат на Пелопоннесе — последняя житница империи. Каждые 5 пунктов дают +1 к доходу. Если к осаде Морея 60 и выше, она пришлёт 500 воинов.'
+};
+
+// ---------- Экраны вне партии ----------
+function screen(inner) {
+  return '<div class="wrap" style="padding-bottom:30px"><div class="overlay" style="position:static;background:none;min-height:92vh">' +
+    '<div class="modal center">' + inner + '</div></div></div>';
 }
 
+function renderTitle() {
+  var saved = load();
+  var canContinue = saved && saved.phase !== 'over' && saved.phase !== 'done';
+  app.innerHTML = screen(
+    '<div class="eagle">☩</div><div class="kicker">1444 — 1453</div>' +
+    '<h2>Последние годы Константинополя</h2>' +
+    '<p>От великой Римской империи остался лишь один город, окружённый владениями османов. Вы — император ромеев. У вас девять лет, чтобы подготовиться к неизбежной осаде.</p>' +
+    '<div class="row">' +
+    (canContinue ? '<button class="btn" data-a="continue">Продолжить</button>' : '') +
+    '<button class="btn ' + (canContinue ? 'ghost' : '') + '" data-a="setup">Новая игра</button>' +
+    '<button class="btn ghost" data-a="help">Как играть</button>' +
+    '</div><div class="row"><button class="icon-btn" data-a="sound">' + (Sound.isOn() ? '🔊 Звук включён' : '🔇 Звук выключен') + '</button></div>'
+  ) + renderPopup();
+}
+
+function renderSetup() {
+  var h = '<div class="kicker">Новая игра</div><h2>Выберите сложность</h2><div class="diffs">';
+  ['dream', 'reality', 'nightmare'].forEach(function (k) {
+    var d = G.DIFFS[k];
+    h += '<button class="diff ' + (k === 'reality' ? 'main' : '') + '" data-diff="' + k + '"><span class="t">' + d.icon + ' ' + d.name +
+      (k === 'reality' ? ' <small style="color:var(--muted);font-size:13px">— рекомендуется</small>' : '') + '</span><span class="d">' + d.desc + '</span></button>';
+  });
+  h += '</div><div class="row"><button class="btn ghost" data-a="to-title">Назад</button></div>';
+  app.innerHTML = screen(h);
+}
+
+var INTRO = [
+  { kicker: '1444 год', title: 'Империя одного города',
+    body: '<p>Тысячу лет назад Римская империя владела половиной известного мира. Теперь у ромеев остались лишь Константинополь, несколько островов и Морея на юге Греции.</p>' +
+      '<p>Город, где когда-то жили полмиллиона человек, опустел: за стенами — едва 50 тысяч жителей, сады и развалины. Вокруг — земли османов. Император платит султану дань.</p>' +
+      '<div class="note">Восемь лет назад, в 1439 году, император Иоанн VIII подписал во Флоренции унию — союз православной и католической церквей — в обмен на обещание военной помощи Запада.</div>' },
+  { kicker: 'Действующие лица', title: 'Императоры и султаны',
+    body: '<ul>' +
+      '<li><b style="color:var(--gold2);font-weight:normal">👑 Иоанн VIII</b> — нынешний император, осторожный дипломат. Его посольства на Запад действуют сильнее.</li>' +
+      '<li><b style="color:var(--gold2);font-weight:normal">⚔️ Константин</b> — его брат, деспот Мореи, храбрый воин. Однажды он унаследует трон, и тогда стены и наёмники будут обходиться выгоднее.</li>' +
+      '<li><b style="color:var(--bad);font-weight:normal">🌙 Мурад II</b> — нынешний султан, опытный и уставший от войн. Угроза при нём растёт медленно, а дань его успокаивает.</li>' +
+      '<li><b style="color:var(--bad);font-weight:normal">🔥 Мехмед II</b> — его сын, которому сейчас 12 лет. Когда он придёт к власти, угроза начнёт расти гораздо быстрее.</li>' +
+      '</ul>' },
+  { kicker: 'Ваша задача', title: 'Дожить до весны 1453 года',
+    body: '<p>Каждый ход — полгода. Отвечайте на события и издавайте до двух указов: чините стены, нанимайте воинов, ищите помощи Запада, платите дань султану.</p>' +
+      '<p>Главная дилемма — <b style="color:var(--gold2);font-weight:normal">уния</b>: Запад помогает тем охотнее, чем твёрже вы за неё держитесь, а горожане её ненавидят.</p>' +
+      '<p>Весной 1453 года Мехмед II придёт к стенам. Исход осады решат всё, что вы успеете сделать.</p>' +
+      '<div class="note">Наведите курсор на любой ресурс (на телефоне — нажмите), чтобы узнать, зачем он нужен.</div>' }
+];
+function renderIntro() {
+  var p = INTRO[introPage], last = introPage === INTRO.length - 1;
+  var dots = INTRO.map(function (_, i) { return '<i class="' + (i === introPage ? 'on' : '') + '"></i>'; }).join('');
+  app.innerHTML = screen('<div class="intro"><div class="kicker">' + p.kicker + '</div><h2>' + p.title + '</h2>' + p.body +
+    '<div class="row">' + (introPage ? '<button class="btn ghost" data-a="intro-back">Назад</button>' : '<button class="btn ghost" data-a="intro-skip">Пропустить</button>') +
+    '<button class="btn" data-a="intro-next">' + (last ? 'Начать правление' : 'Далее') + '</button></div><div class="dots">' + dots + '</div></div>');
+}
+
+// ---------- Экран партии ----------
 function statCard(key, val, prevVal, extra) {
   var st = G.STATS[key];
   var d = prevVal === undefined || prevVal === null ? 0 : val - prevVal;
@@ -786,28 +1002,44 @@ function statCard(key, val, prevVal, extra) {
   }
   var bar = st.max === 100 ? '<div class="bar"><i style="width:' + Math.max(0, Math.min(100, val)) + '%"></i></div>' : '';
   var danger = (key === 'threat' && val >= 80) || (key === 'unity' && val <= 20) || (key === 'gold' && val < 0) || (key === 'walls' && val < 25);
-  return '<div class="stat ' + (key === 'threat' ? 'threat ' : '') + (danger ? 'danger' : '') + '">' +
-    '<div class="lbl"><span>' + st.icon + ' ' + st.name + '</span></div>' +
-    '<div class="val">' + val + dh + '</div>' + (extra || '') + bar + '</div>';
+  return '<div class="stat ' + (key === 'threat' ? 'threat ' : '') + (danger ? 'danger' : '') + '" data-stat="' + key + '">' +
+    '<div class="lbl"><span>' + st.icon + ' ' + st.name + '</span><span class="info">ⓘ</span></div>' +
+    '<div class="val">' + val + dh + '</div>' + (extra || '') + bar +
+    '<div class="tip">' + TIPS[key] + '</div></div>';
+}
+
+function rulerCard(name, enemy) {
+  var r = G.RULERS[name] || { icon: '', title: '', desc: '' };
+  return '<div class="ruler ' + (enemy ? 'enemy' : '') + '"><b>' + r.icon + ' ' + esc(name) + ' <i>· ' + r.title + '</i></b>' + r.desc + '</div>';
 }
 
 function renderGame() {
   var s = S, p = s.prev || {};
-  var inc = G.income(s), upk = G.upkeep(s);
+  var inc = G.income(s), upk = G.upkeep(s), done = s.phase === 'done';
   var h = '<div class="wrap">';
-  h += '<div class="top"><div class="title">☩ Последние годы Константинополя<small>Император: ' + esc(s.ruler) + ' · Султан: ' + esc(s.sultan) + '</small></div>' +
-       '<div style="display:flex;gap:10px;align-items:center"><div class="date">' + G.dateLabel(s.t) +
-       '<small>Ход ' + (s.t + 1) + ' из ' + (G.LAST_TURN + 1) + ' · до осады ' + (G.LAST_TURN - s.t) + ' пол.</small></div>' +
+  h += '<div class="top"><div class="title">☩ Последние годы Константинополя<small>Сложность: ' + G.DIFFS[s.diff].name + '</small></div>' +
+       '<div style="display:flex;gap:8px;align-items:center"><div class="date">' + G.dateLabel(s.t) +
+       '<small>Ход ' + (s.t + 1) + ' из ' + (G.LAST_TURN + 1) + ' · ' + G.untilSiege(s.t) + '</small></div>' +
+       '<button class="icon-btn" data-a="sound" aria-label="Звук">' + (Sound.isOn() ? '🔊' : '🔇') + '</button>' +
        '<button class="menu-btn" data-a="menu" aria-label="Меню">☰</button></div></div>';
 
+  // Отложенное событие
+  var ev = G.currentEvent(s);
+  if (!done && s.phase === 'events' && s.hideEvent && ev) {
+    h += '<div class="panel pending"><div>📜 Ждёт вашего решения: <b style="color:var(--gold2);font-weight:normal">' + ev.title + '</b>' +
+      (s.queue.length > 1 ? ' (и ещё ' + (s.queue.length - 1) + ')' : '') + '</div><button class="btn" data-a="show-event">Открыть</button></div>';
+  }
+
+  h += '<div class="rulers">' + rulerCard(s.ruler) + rulerCard(s.sultan, true) + '</div>';
+
   h += '<div class="stats">' +
-    statCard('gold', s.gold, p.gold, '<div class="lbl" style="font-size:12px"><span>доход +' + inc + ', войско −' + upk + '</span></div>') +
+    statCard('gold', s.gold, p.gold) +
     statCard('walls', s.walls, p.walls) +
-    statCard('garrison', s.garrison, p.garrison, '<div class="lbl" style="font-size:12px"><span>воинов</span></div>') +
+    statCard('garrison', s.garrison, p.garrison, '<div class="sub">воинов</div>') +
     statCard('west', s.west, p.west) +
     statCard('unity', s.unity, p.unity) +
-    statCard('threat', s.threat, p.threat, '<div class="lbl" style="font-size:12px"><span>растёт на ' + G.threatGrowth(s) + ' за ход</span></div>') +
-    statCard('morea', s.morea, p.morea) +
+    statCard('threat', s.threat, p.threat, '<div class="sub">+' + G.threatGrowth(s) + ' за полгода</div>') +
+    statCard('morea', s.morea, p.morea, '<div class="sub">даёт +' + Math.round(s.morea / 5) + ' дохода</div>') +
     '</div>';
 
   // Предупреждения
@@ -815,54 +1047,62 @@ function renderGame() {
   if (s.threat >= 80) w.push('🌙 Угроза ' + s.threat + ' из 100. Если она дойдёт до 100 раньше 1453 года, султан нападёт немедленно — и город не будет готов.');
   if (s.unity <= 20) w.push('🤝 Единство ' + s.unity + '. Если оно упадёт до нуля, в городе вспыхнет бунт.');
   if (s.gold < 0) w.push('💰 Казна в долгах. Наёмники уходят. Если долг превысит 25, наступит банкротство.');
-  if (s.gold >= 0 && s.gold + inc - upk < 0) w.push('💰 Доход меньше расходов на войско: без новых денег казна уйдёт в минус.');
-  if (w.length) h += '<div class="panel warn"><div>' + w.join('</div><div>') + '</div></div>';
+  if (w.length && !done) h += '<div class="panel warn"><div>' + w.join('</div><div>') + '</div></div>';
 
-  if (s.report) {
+  if (s.report && !done) {
     var r = s.report;
-    h += '<div class="panel report">Итоги прошлого полугодия: доход <b>+' + r.inc + '</b>, содержание войска <b>−' + r.upk +
-      '</b>, стены осыпались на <b>' + r.decay + '</b>, угроза выросла на <b>' + r.tg + '</b>.' +
+    h += '<div class="panel report">Итоги прошлого полугодия: доход <b>+' + r.inc + '</b>, жалованье войску <b>−' + r.upk +
+      '</b>, стены обветшали на <b>' + r.decay + '</b>, угроза выросла на <b>' + r.tg + '</b>.' +
       (r.notes.length ? '<br>' + r.notes.join('<br>') : '') + '</div>';
+  } else if (s.t === 0 && !done) {
+    h += '<div class="panel report">Первое полугодие спокойно: осмотритесь, изучите ресурсы (наведите курсор или нажмите на карточку) и издайте первые указы.</div>';
   }
 
-  // Действия
-  h += '<div class="panel"><h2>Указы на полугодие — выберите два</h2><div class="actions">';
+  // Указы
+  h += '<div class="panel"><h2>Указы на полугодие — до двух</h2><div class="actions">';
   G.ACTIONS.forEach(function (a) {
     var sel = s.chosen.indexOf(a.id) >= 0;
-    var can = G.canChoose(s, a.id);
+    var can = !done && (sel || G.canChoose(s, a.id));
     var cost = a.cost(s);
-    h += '<button class="act ' + (sel ? 'sel' : '') + '" data-act="' + a.id + '" ' + (can || sel ? '' : 'disabled') + '>' +
+    h += '<button class="act ' + (sel ? 'sel' : '') + '" data-act="' + a.id + '" ' + (can ? '' : 'disabled') + '>' +
       '<div class="h"><span class="n">' + a.icon + ' ' + a.name + '</span><span class="c">' + (cost ? '💰 ' + cost : 'бесплатно') + '</span></div>' +
       '<div class="ds">' + a.desc + '</div>' + chips(a.eff(s)) + '</button>';
   });
   h += '</div></div>';
 
   // Летопись
-  h += '<details class="log panel"><summary>📖 Летопись</summary><ul>';
+  h += '<details class="log panel" ' + (done ? 'open' : '') + '><summary>📖 Летопись</summary><ul>';
   s.log.forEach(function (l) { h += '<li><b>' + l.d + ':</b> ' + l.text + '</li>'; });
-  h += '</ul></details>';
-  h += '</div>';
+  h += '</ul></details></div>';
 
-  // Нижняя панель
-  var cost = G.chosenCost(s);
-  var gain = 0; s.chosen.forEach(function (id) { gain += G.actionById(id).eff(s).gold || 0; });
-  var names = s.chosen.map(function (id) { return G.actionById(id).name; });
-  h += '<div class="footer"><div class="in"><div class="info">' +
-    (s.chosen.length ? 'Выбрано: <b>' + names.join(', ') + '</b> · ' : 'Выберите два указа · ') +
-    'стоимость <b>' + cost + '</b> · в казне останется <b>' + (s.gold - cost + gain) + '</b>, затем <b>' + (inc - upk >= 0 ? '+' : '−') + Math.abs(inc - upk) + '</b> за полугодие' +
-    '</div><button class="btn" data-a="end" ' + (s.chosen.length === 2 ? '' : 'disabled') + '>' +
-    (s.t >= G.LAST_TURN ? 'Встретить осаду ▶' : 'Завершить ход ▶') + '</button></div></div>';
+  // Нижняя панель: прогноз казны
+  if (done) {
+    h += '<div class="footer"><div class="in"><div class="info">Партия окончена: <b>' + G.ENDINGS[s.over.ending].title + '</b></div>' +
+      '<button class="btn" data-a="setup">Новая игра</button></div></div>';
+  } else {
+    var f = G.forecast(s);
+    var parts = '<span>💰 <b>' + f.now + '</b></span>';
+    if (f.cost) parts += '<span class="m">− ' + f.cost + ' указы</span>';
+    if (f.gain) parts += '<span class="p">+ ' + f.gain + ' налог</span>';
+    parts += '<span class="p">+ ' + f.inc + ' доход</span><span class="m">− ' + f.upk + ' войско</span>';
+    parts += '<span>= <span class="res ' + (f.next < 0 ? 'neg' : '') + '">' + f.next + '</span> <small>к началу следующего хода</small></span>';
+    var n = s.chosen.length, blocked = s.queue.length > 0;
+    var label = blocked ? 'Сначала ответьте на событие'
+      : (s.t >= G.LAST_TURN ? 'Встретить осаду ▶' : 'Завершить ход ▶' + (n < 2 ? ' (' + (n === 0 ? 'без указов' : '1 указ') + ')' : ''));
+    h += '<div class="footer"><div class="in"><div><div class="fc">' + parts + '</div><div class="sub">Указов выбрано: ' + n + ' из 2' +
+      (f.next < 0 ? ' · <span style="color:var(--bad)">казна уйдёт в долг!</span>' : '') + '</div></div>' +
+      '<button class="btn" data-a="end" ' + (blocked ? 'disabled' : '') + '>' + label + '</button></div></div>';
+  }
 
-  h += renderOverlay();
-  h += renderPopup();
+  h += renderOverlay() + renderPopup();
   app.innerHTML = h;
 }
 
 function renderOverlay() {
   var s = S;
-  if (s.phase === 'events' && s.lastResult) return resultModal();
-  if (s.phase === 'events') return eventModal();
-  if (s.phase === 'actions' && s.lastResult) return resultModal();
+  if (s.phase === 'done') return '';
+  if (s.lastResult) return resultModal();
+  if (s.phase === 'events' && !s.hideEvent) return eventModal();
   if (s.phase === 'siege') return siegeModal();
   if (s.phase === 'over') return endModal();
   return '';
@@ -881,7 +1121,7 @@ function eventModal() {
     h += '<button class="opt" data-opt="' + i + '" ' + (ok ? '' : 'disabled') + '><span class="t">' + o.text + '</span>' +
       chips(o.eff) + (ok ? '' : '<span class="why">' + (o.reqText || 'Недоступно') + '</span>') + '</button>';
   });
-  return h + '</div></div></div>';
+  return h + '</div><div class="row"><button class="btn ghost" data-a="defer">Отложить решение — посмотреть ресурсы</button></div></div></div>';
 }
 
 function resultModal() {
@@ -889,13 +1129,11 @@ function resultModal() {
   return '<div class="overlay"><div class="modal">' +
     '<div class="kicker">Решение принято</div><h2>' + r.title + '</h2>' +
     '<div class="result">Вы выбрали: «' + r.choice + '»' + (r.text ? '<br>' + r.text : '') + '</div>' +
-    chips(r.eff) +
-    '<div class="row"><button class="btn" data-a="ack">Далее</button></div></div></div>';
+    chips(r.eff) + '<div class="row"><button class="btn" data-a="ack">Далее</button></div></div></div>';
 }
 
 function siegeModal() {
-  var s = S, sg = s.siege, n = s.siegeStep;
-  var early = s.flags.earlySiege;
+  var s = S, sg = s.siege, n = s.siegeStep, early = s.flags.earlySiege;
   var h = '<div class="overlay"><div class="modal"><div class="kicker">' + (early ? 'Досрочная осада · ' + G.dateLabel(s.t) : 'Весна 1453') + '</div><h2>Осада Константинополя</h2>';
   if (n === 0) {
     h += (early
@@ -924,26 +1162,28 @@ function siegeModal() {
 
 function endModal() {
   var s = S, e = G.ENDINGS[s.over.ending];
-  var h = '<div class="overlay"><div class="modal center">' +
+  return '<div class="overlay"><div class="modal center">' +
     '<div class="eagle">' + (e.win ? '☩' : '✝') + '</div>' +
     '<div class="kicker">' + e.kicker + '</div><h2>' + e.title + '</h2>' +
     '<p style="text-align:left">' + e.text + '</p><div class="note" style="text-align:left">' + e.note + '</div>' +
     '<p style="color:' + (e.win ? 'var(--good)' : 'var(--bad)') + '">' + (e.win ? 'Победа!' : 'Поражение') +
+    ' · сложность «' + G.DIFFS[s.diff].name + '»' +
     (s.siege ? ' · итог осады: ' + (s.siege.total > 0 ? '+' : '') + s.siege.total : ' · ' + G.dateLabel(s.t)) + '</p>' +
-    '<div class="row"><button class="btn" data-a="new">Сыграть ещё раз</button><button class="btn ghost" data-a="close-end">Посмотреть летопись</button></div></div></div>';
-  return h;
+    '<div class="row"><button class="btn" data-a="setup">Сыграть ещё раз</button><button class="btn ghost" data-a="close-end">Посмотреть летопись</button></div></div></div>';
 }
 
 function renderPopup() {
   if (popup === 'help') {
     return '<div class="overlay"><div class="modal help"><div class="kicker">Правила</div><h2>Как играть</h2>' +
       '<p>Один ход — одно полугодие. Игра начинается в 1444 году и заканчивается осадой весной 1453-го (19 ходов).</p>' +
-      '<ul><li>В начале хода происходят <b>события</b> — выберите, как на них ответить.</li>' +
-      '<li>Затем выберите <b>два указа</b> из восьми. Цветные метки показывают, что изменится: зелёные — хорошо, красные — плохо.</li>' +
-      '<li>В конце хода вы получаете <b>доход</b>, платите <b>войску</b>, стены понемногу ветшают, а <b>угроза</b> растёт.</li></ul>' +
-      '<p><b>Поражение раньше срока:</b> долг больше 25 — банкротство; единство 0 — бунт; угроза 100 — султан нападёт немедленно, не дожидаясь 1453 года (до воцарения Мехмеда II это сразу поражение, после — досрочная осада, к которой город не готов).</p>' +
+      '<ul><li>В начале хода происходят <b>события</b>. Ответ можно отложить, чтобы свериться с ресурсами, но закончить ход без ответа нельзя.</li>' +
+      '<li>Затем издайте <b>до двух указов</b> из восьми (можно и меньше — ради экономии). Цветные метки показывают, что изменится: зелёные — хорошо, красные — плохо.</li>' +
+      '<li>Внизу экрана — прогноз казны на начало следующего хода.</li>' +
+      '<li>В конце хода приходит <b>доход</b>, войску платят <b>жалованье</b>, стены ветшают, а <b>угроза</b> растёт.</li>' +
+      '<li>Наведите курсор на ресурс (на телефоне — нажмите), чтобы узнать, зачем он нужен.</li></ul>' +
+      '<p><b>Поражение раньше срока:</b> долг больше 25 — банкротство; единство 0 — бунт; угроза 100 — султан нападёт немедленно (до воцарения Мехмеда II это сразу поражение, после — досрочная осада, к которой город не готов).</p>' +
       '<p><b>Осада</b> пройдёт в четыре этапа. Важно всё: стены, гарнизон, помощь Запада, единство, а также особые решения — пушкарь Урбан, цепь Золотого Рога, инженер Грант и кондотьер Джустиниани. Сильная Морея пришлёт подкрепление.</p>' +
-      '<p>Спор об <b>унии</b> — главная дилемма: Запад помогает тем охотнее, чем твёрже вы держитесь унии, а горожане её ненавидят.</p>' +
+      '<p><b>Правители различаются:</b> Иоанн VIII — дипломат, Константин XI — воин; Мурад II осторожен, Мехмед II — завоеватель.</p>' +
       '<p style="color:var(--muted);font-size:14px">Игра сохраняется автоматически в этом браузере.</p>' +
       '<div class="row"><button class="btn" data-a="close-popup">Понятно</button></div></div></div>';
   }
@@ -952,56 +1192,75 @@ function renderPopup() {
       '<div class="row" style="flex-direction:column;align-items:stretch">' +
       '<button class="btn" data-a="close-popup">Вернуться к игре</button>' +
       '<button class="btn ghost" data-a="help">Как играть</button>' +
+      '<button class="btn ghost" data-a="sound">' + (Sound.isOn() ? '🔊 Выключить звук' : '🔇 Включить звук') + '</button>' +
       '<button class="btn ghost" data-a="confirm-new">Начать заново</button>' +
       '<button class="btn ghost" data-a="to-title">На главный экран</button>' +
       '</div></div></div>';
   }
   if (popup === 'confirm-new') {
     return '<div class="overlay"><div class="modal center"><h2>Начать заново?</h2><p>Текущая партия будет потеряна.</p>' +
-      '<div class="row"><button class="btn" data-a="new">Да, новая игра</button><button class="btn ghost" data-a="close-popup">Отмена</button></div></div></div>';
+      '<div class="row"><button class="btn" data-a="setup">Да, новая игра</button><button class="btn ghost" data-a="close-popup">Отмена</button></div></div></div>';
   }
   return '';
 }
 
 function render() {
-  if (view === 'title' || !S) renderTitle(); else renderGame();
+  if (view === 'setup') return renderSetup();
+  if (view === 'intro') return renderIntro();
+  if (view === 'title' || !S) return renderTitle();
+  renderGame();
+}
+
+// Какой звук сыграть после изменения состояния
+function afterChange(before) {
+  var s = S; if (!s) return;
+  if (s.phase === 'over' && before !== 'over') { G.ENDINGS[s.over.ending].win ? Sound.win() : Sound.lose(); return; }
+  if (s.phase === 'siege' && before !== 'siege') { Sound.siege(); return; }
+  if (s.phase === 'events' && !s.hideEvent && !s.lastResult) Sound.event();
 }
 
 // ---------- Обработка нажатий ----------
 app.addEventListener('click', function (e) {
+  var stat = e.target.closest('.stat');
+  var opened = app.querySelectorAll('.stat.open');
+  for (var i = 0; i < opened.length; i++) if (opened[i] !== stat) opened[i].classList.remove('open');
+  if (stat) { stat.classList.toggle('open'); return; }
+
   var b = e.target.closest('button');
   if (!b || b.disabled) return;
   var a = b.getAttribute('data-a');
-  if (b.hasAttribute('data-act')) { G.toggleAction(S, b.getAttribute('data-act')); save(); render(); return; }
-  if (b.hasAttribute('data-opt')) { G.resolveEvent(S, +b.getAttribute('data-opt')); save(); render(); return; }
+  var before = S ? S.phase : null;
+  if (b.hasAttribute('data-act')) { G.toggleAction(S, b.getAttribute('data-act')); Sound.select(); save(); render(); return; }
+  if (b.hasAttribute('data-opt')) { G.resolveEvent(S, +b.getAttribute('data-opt')); Sound.click(); save(); render(); return; }
+  if (b.hasAttribute('data-diff')) { pendingDiff = b.getAttribute('data-diff'); introPage = 0; view = 'intro'; Sound.click(); render(); return; }
+  Sound.click();
   switch (a) {
-    case 'new': S = G.newGame(); popup = null; view = 'game'; save(); break;
-    case 'continue': S = load(); view = S ? 'game' : 'title'; break;
+    case 'setup': popup = null; view = 'setup'; break;
+    case 'continue': S = load(); view = S ? 'game' : 'title'; if (S) afterChange(null); break;
+    case 'intro-next': if (introPage < INTRO.length - 1) { introPage++; break; } /* falls through */
+    case 'intro-skip': S = G.newGame(null, pendingDiff); view = 'game'; save(); Sound.turn(); break;
+    case 'intro-back': introPage = Math.max(0, introPage - 1); break;
     case 'help': popup = 'help'; break;
     case 'menu': popup = 'menu'; break;
+    case 'sound': Sound.toggle(); break;
     case 'confirm-new': popup = 'confirm-new'; break;
     case 'close-popup': popup = null; break;
     case 'to-title': popup = null; view = 'title'; break;
-    case 'ack': S.lastResult = null; save(); break;
-    case 'end': G.endTurn(S); save(); window.scrollTo(0, 0); break;
+    case 'defer': S.hideEvent = true; save(); break;
+    case 'show-event': S.hideEvent = false; save(); Sound.event(); break;
+    case 'ack': S.lastResult = null; save(); afterChange(before); break;
+    case 'end':
+      G.endTurn(S); save(); window.scrollTo(0, 0);
+      if (S.phase === 'events' || S.phase === 'actions') Sound.turn();
+      afterChange(before); break;
     case 'siege':
-      if (S.siegeStep < S.siege.stages.length) S.siegeStep++; else G.siegeDone(S);
+      if (S.siegeStep < S.siege.stages.length) { S.siegeStep++; S.siege.stages[S.siegeStep - 1].ok ? Sound.ok() : Sound.fail(); }
+      else { G.siegeDone(S); afterChange(before); }
       save(); break;
     case 'close-end': S.phase = 'done'; save(); break;
   }
   render();
 });
-
-// Восстановление после «Посмотреть летопись»
-var _render = renderGame;
-renderGame = function () {
-  _render();
-  if (S && S.phase === 'done') {
-    var f = app.querySelector('.footer .in');
-    if (f) f.innerHTML = '<div class="info">Партия окончена: <b>' + G.ENDINGS[S.over.ending].title + '</b></div><button class="btn" data-a="new">Новая игра</button>';
-    app.querySelectorAll('.act').forEach(function (x) { x.disabled = true; });
-  }
-};
 
 render();
 })();
