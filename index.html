@@ -162,6 +162,8 @@ details.log summary{cursor:pointer;color:var(--gold2);font-size:17px}
 .toolbar .btn{padding:7px 12px;font-size:15px}
 .scene{display:block;width:100%;height:auto;aspect-ratio:10/3;border-radius:8px;margin:2px 0 12px;box-shadow:0 4px 14px rgba(0,0,0,.45)}
 .chip .to{opacity:.75}
+.title-art .scene{margin:0 0 10px}
+.stage .scene{margin:0 0 8px}
 .toast{position:fixed;top:-90px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:10px;align-items:center;background:#1c1026;border:1px solid var(--gold);
   border-radius:12px;padding:10px 16px;box-shadow:0 8px 24px rgba(0,0,0,.6);transition:top .4s;color:var(--text);max-width:92vw}
 .toast.on{top:14px}
@@ -1875,6 +1877,11 @@ root.Game = {
 var G = window.Game;
 var SAVE_KEY = 'constantinople-save-v3';
 var SOUND_KEY = 'constantinople-sound';
+var SETTINGS_KEY = 'constantinople-settings';
+var SETTINGS = { title: 'panorama', music: true, volume: 0.5 };
+try { var _st = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); if (_st) for (var _k in _st) SETTINGS[_k] = _st[_k]; } catch (e) {}
+function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) {} }
+var TITLE_VARIANTS = { panorama: 'Город с моря', dawn: 'Стены на рассвете', church: 'Святая София ночью', eagle: 'Двуглавый орёл' };
 var HALL_KEY = 'constantinople-hall';
 var DEV = /dev/.test(location.hash);
 // ---------- Исторический зал: статьи открываются, когда игрок встречает их в игре ----------
@@ -2327,14 +2334,18 @@ var SCENES = {
       glow(215, 156, 18, 'fireglow') + flame(215, 160, .4) + glow(360, 156, 18, 'fireglow') + flame(360, 160, .4);
   },
   morea: function () {
-    return sun(500, 44, 18, false) +
-      '<path d="M0 120 L80 60 L150 95 L240 40 L330 90 L420 50 L520 85 L600 60 V180 H0 Z" fill="#2a1a40" opacity=".85"/>' +
-      '<path d="M0 140 L120 90 L220 120 L330 84 L460 118 L600 96 V180 H0 Z" fill="#22143a"/>' +
-      '<path d="M120 180 Q200 70 300 100 Q360 120 420 180 Z" fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1"/>' +
-      tower(232, 74, 30, 26) + '<path d="M262 92 Q300 104 330 140" stroke="' + SC.gold + '" stroke-width="2" fill="none"/>' +
-      domeBuilding(250, 134, 28, 16) + domeBuilding(300, 150, 26, 14) + house(200, 150, 20, 14) + house(330, 160, 18, 12) +
-      cypress(285, 132, 30) + cypress(220, 160, 26) +
-      '<path d="M0 180 V160 Q300 150 600 162 V180 Z" fill="#141a14"/>' + rep(9, function (i) { return olive(30 + i * 68, 176, 7 + (i % 2) * 2); });
+    return sun(510, 40, 16, false) +
+      '<path d="M0 110 L70 52 L120 78 L200 30 L280 70 L360 38 L450 74 L540 44 L600 66 V180 H0 Z" fill="#2c1c44"/>' +
+      '<path d="M190 34 l10 -4 l10 6 M350 42 l10 -4 l12 8 M530 48 l10 -4 l10 6" stroke="#e8e0d0" stroke-width="2" fill="none" opacity=".55"/>' +
+      '<path d="M0 132 L110 96 L230 116 L340 88 L470 112 L600 92 V180 H0 Z" fill="#22143a"/>' +
+      '<path d="M90 180 Q170 60 270 52 Q350 60 430 180 Z" fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      '<g fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1"><path d="M232 62 L232 40 L312 40 L312 62" />' + crenels(232, 40, 80, 10) + '</g>' +
+      tower(226, 26, 26, 36) + tower(294, 30, 22, 32) +
+      '<path d="M236 64 Q200 100 168 150 M308 64 Q350 100 386 150" stroke="' + SC.gold + '" stroke-width="2" fill="none" opacity=".8"/>' +
+      domeBuilding(222, 112, 34, 18) + domeBuilding(286, 128, 30, 16) + domeBuilding(250, 150, 26, 14) +
+      house(196, 136, 18, 12) + house(320, 150, 18, 12) + house(340, 136, 16, 11) + house(214, 160, 18, 12) +
+      cypress(270, 112, 24) + cypress(206, 116, 20) + cypress(330, 122, 22) + cypress(300, 166, 20) +
+      '<path d="M0 180 V160 Q300 150 600 162 V180 Z" fill="#141a14"/>' + rep(10, function (i) { return olive(24 + i * 62, 177, 7 + (i % 3)); });
   },
   disaster: function () {
     return '<rect width="600" height="180" fill="#4a1414" opacity=".5"/>' +
@@ -2374,12 +2385,30 @@ var SCENES = {
       person(100, 160, 1) + person(420, 162, .9);
   },
   battle: function () {
-    return '<rect width="600" height="180" fill="#5a2a1a" opacity=".35"/>' + sun(300, 120, 30, false) +
+    return '<rect width="600" height="180" fill="#5a2a1a" opacity=".35"/>' + sun(300, 70, 22, false) +
+      rep(14, function (i) { var x = 120 + i * 26; return '<path d="M' + x + ' ' + (110 - (i % 3) * 8) + ' q40 -30 ' + (80 + (i % 4) * 10) + ' -6" stroke="' + SC.light + '" stroke-width=".8" fill="none" opacity=".35"/>'; }) +
       '<path d="M0 150 Q300 136 600 150 V180 H0 Z" fill="' + SC.dark + '"/>' +
-      rep(7, function (i) { return soldier(40 + i * 32, 162, .85); }) + rep(7, function (i) { return soldier(370 + i * 32, 162, .85); }) +
-      '<g stroke="' + SC.light + '" stroke-width="2.5" stroke-linecap="round"><line x1="250" y1="150" x2="330" y2="96"/><line x1="350" y1="150" x2="270" y2="96"/><line x1="240" y1="152" x2="310" y2="110"/><line x1="360" y1="152" x2="290" y2="110"/></g>' +
-      banner(70, 150, 'cross') + banner(150, 150, 'cross') + banner(450, 150, 'moon') + banner(530, 150, 'moon') +
-      rep(6, function (i) { return '<ellipse cx="' + (150 + i * 60) + '" cy="150" rx="40" ry="10" fill="#d8b45a" opacity=".08"/>'; });
+      '<g opacity=".6">' + rep(8, function (i) { return soldier(30 + i * 30, 150, .6); }) + rep(8, function (i) { return soldier(360 + i * 30, 150, .6); }) + '</g>' +
+      rep(6, function (i) { return soldier(60 + i * 34, 170, .95); }) + rep(6, function (i) { return soldier(370 + i * 34, 170, .95); }) +
+      rep(6, function (i) { return '<ellipse cx="' + (240 + i * 25) + '" cy="' + (156 - (i % 2) * 10) + '" rx="30" ry="14" fill="#d8b45a" opacity=".1"/>'; }) +
+      '<line x1="290" y1="168" x2="318" y2="138" stroke="' + SC.gold + '" stroke-width="2"/><path d="M318 138 l14 4 l-6 10 z" fill="#5e2276" stroke="' + SC.gold + '"/>' +
+      banner(40, 150, 'cross') + banner(110, 150, 'cross') + banner(490, 150, 'moon') + banner(560, 150, 'moon') +
+      flame(250, 172, .6) + flame(360, 172, .5);
+  },
+  panorama: function () {
+    return '<rect width="600" height="180" fill="#7a3a2a" opacity=".35"/>' + sun(470, 102, 24, false) +
+      '<path d="M380 128 Q470 104 600 110 V128 Z" fill="#2a1830"/>' +
+      '<rect x="510" y="74" width="16" height="40" fill="#22142e" stroke="' + SC.gold + '" stroke-width=".8"/><path d="M507 74 L518 56 L529 74 Z" fill="#22142e" stroke="' + SC.gold + '" stroke-width=".8"/>' +
+      skyline(124, .55, '#2a1838') +
+      '<g fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1.2"><rect x="110" y="86" width="150" height="38"/><path d="M128 86 A30 20 0 0 1 188 86 Z"/><path d="M182 86 A30 20 0 0 1 242 86 Z"/>' +
+      '<rect x="140" y="70" width="90" height="16"/><path d="M140 70 A45 38 0 0 1 230 70 Z"/></g>' +
+      rep(11, function (i) { return '<rect x="' + (146 + i * 7.5) + '" y="73" width="3" height="8" fill="' + SC.light + '" opacity=".75"/>'; }) +
+      '<path d="M185 32 v-12 M180 25 h10" stroke="' + SC.light + '" stroke-width="2"/>' +
+      brick(0, 118, 380, 12) + [20, 90, 160, 230, 300].map(function (x) { return tower(x, 106, 16, 24); }).join('') +
+      '<rect x="0" y="130" width="600" height="50" fill="#1a1428"/>' +
+      rep(9, function (i) { return '<rect x="' + (452 - (i % 3) * 6) + '" y="' + (133 + i * 5) + '" width="' + (36 + (i % 3) * 10 - i * 2) + '" height="1.6" fill="' + SC.light + '" opacity="' + (0.7 - i * 0.06) + '"/>'; }) +
+      galley(250, 160, .8, 'cross') + galley(380, 146, .5, 'cross') + galley(560, 140, .35, '') +
+      rep(4, function (i) { var y = 150 + i * 7; return '<path d="M0 ' + y + ' Q 75 ' + (y - 4) + ' 150 ' + y + ' T 300 ' + y + ' T 450 ' + y + ' T 600 ' + y + '" fill="none" stroke="' + SC.gold + '" stroke-width="1" opacity="' + (0.45 - i * 0.08) + '"/>'; });
   },
   monastery: function () {
     return '<rect width="600" height="180" fill="#160c1e"/>' + '<path d="M60 180 V40 A240 60 0 0 1 540 40 V180" fill="#22142e" stroke="' + SC.gold + '" stroke-width="1"/>' +
@@ -2685,7 +2714,8 @@ function renderTitle() {
   var saved = load();
   var canContinue = saved && saved.phase !== 'over' && saved.phase !== 'done';
   app.innerHTML = screen(
-    '<div class="eagle">☩</div><div class="kicker">1444 — 1453 · версия ' + G.VERSION + '</div>' +
+    '<div class="title-art">' + sceneSVG(SETTINGS.title in TITLE_VARIANTS ? SETTINGS.title : 'panorama') + '</div>' +
+    '<div class="kicker">1444 — 1453 · версия ' + G.VERSION + '</div>' +
     '<h2>Последние годы Константинополя</h2>' +
     '<p>От великой Римской империи остался лишь один город, окружённый владениями османов. Вы — император ромеев. У вас девять лет, чтобы подготовиться к неизбежной осаде.</p>' +
     '<div class="row">' +
@@ -2693,7 +2723,7 @@ function renderTitle() {
     '<button class="btn ' + (canContinue ? 'ghost' : '') + '" data-a="setup">Новая игра</button>' +
     '<button class="btn ghost" data-a="help">Как играть</button>' +
     '<button class="btn ghost" data-a="hall">' + hallBtnLabel() + '</button>' +
-    '</div><div class="row"><button class="icon-btn" data-a="ach">🏆 Достижения ' + achGot().length + '/' + ACHIEVEMENTS.length + '</button><button class="icon-btn" data-a="about">ℹ️ Об игре</button><button class="icon-btn" data-a="sound">' + (Sound.isOn() ? '🔊 Звук включён' : '🔇 Звук выключен') + '</button></div>'
+    '</div><div class="row"><button class="icon-btn" data-a="ach">🏆 Достижения ' + achGot().length + '/' + ACHIEVEMENTS.length + '</button><button class="icon-btn" data-a="about">ℹ️ Об игре</button><button class="icon-btn" data-a="settings">⚙ Настройки</button></div>'
   ) + renderPopup();
 }
 
@@ -2934,7 +2964,7 @@ function siegeModal() {
   }
   for (var i = 0; i < n; i++) {
     var st = sg.stages[i];
-    h += '<div class="stage ' + (st.ok ? 'ok' : 'fail') + '"><div class="st"><span>' + st.title + '</span><span>' + (st.ok ? '✔ успех' : '✘ неудача') + '</span></div>' +
+    h += '<div class="stage ' + (st.ok ? 'ok' : 'fail') + '">' + (i === n - 1 ? sceneSVG(['cannon', 'harbor', 'mine', 'battle'][i]) : '') + '<div class="st"><span>' + st.title + '</span><span>' + (st.ok ? '✔ успех' : '✘ неудача') + '</span></div>' +
       '<div style="font-size:12.5px;color:var(--muted)">' + st.when + '</div><p>' + st.text + '</p></div>';
   }
   h += '<div class="row"><button class="btn" data-a="siege">' + (n === 0 ? 'Начать осаду' : n < sg.stages.length ? 'Далее' : 'Чем всё закончилось?') + '</button></div>';
@@ -2978,7 +3008,7 @@ function renderPopup() {
       '<button class="btn" data-a="close-popup">Вернуться к игре</button>' +
       '<button class="btn ghost" data-a="help">Как играть</button>' +
       '<button class="btn ghost" data-a="hall">' + hallBtnLabel() + '</button>' +
-      '<button class="btn ghost" data-a="sound">' + (Sound.isOn() ? '🔊 Выключить звук' : '🔇 Включить звук') + '</button>' +
+      '<button class="btn ghost" data-a="settings">⚙ Настройки</button>' +
       '<button class="btn ghost" data-a="ach">🏆 Достижения (' + achGot().length + '/' + ACHIEVEMENTS.length + ')</button>' +
       '<button class="btn ghost" data-a="about">ℹ️ Об игре · версия ' + G.VERSION + '</button>' +
       '<button class="btn ghost" data-a="confirm-new">Начать заново</button>' +
@@ -3110,6 +3140,16 @@ function renderPopup() {
       '<div class="row"><button class="btn" data-a="do-rewind">Вернуться</button><button class="btn ghost" data-a="close-popup">Отмена</button></div></div></div>';
   }
   if (popup === 'ach') return achPopup();
+  if (popup === 'settings') {
+    var tv = Object.keys(TITLE_VARIANTS).map(function (k) { return '<button class="diff ' + (SETTINGS.title === k ? 'main' : '') + '" data-title="' + k + '"><span class="t">' + (SETTINGS.title === k ? '◉ ' : '○ ') + TITLE_VARIANTS[k] + '</span></button>'; }).join('');
+    return '<div class="overlay"><div class="modal"><div class="kicker">Настройки</div><h2>⚙ Настройки</h2>' +
+      '<div class="lh"><span>ЗВУК</span></div><div class="row" style="justify-content:flex-start">' +
+      '<button class="btn ghost" data-a="sound">' + (Sound.isOn() ? '🔊 Звуки: включены' : '🔇 Звуки: выключены') + '</button>' +
+      (typeof Music !== 'undefined' ? '<button class="btn ghost" data-a="music">' + (SETTINGS.music ? '🎵 Музыка: включена' : '🎵 Музыка: выключена') + '</button>' +
+        '<button class="btn ghost" data-a="vol">Громкость музыки: ' + Math.round(SETTINGS.volume * 100) + '%</button>' : '') + '</div>' +
+      '<div class="lh" style="margin-top:12px"><span>ГЛАВНЫЙ ЭКРАН</span></div><div class="speeds">' + tv + '</div>' +
+      '<div class="row"><button class="btn" data-a="close-popup">Готово</button></div></div></div>';
+  }
   if (popup === 'about') {
     return '<div class="overlay"><div class="modal help"><div class="kicker">Версия ' + G.VERSION + '</div><h2>Об игре</h2>' +
       '<p><b style="color:var(--gold2);font-weight:normal">«Последние годы Константинополя»</b> — пошаговая историческая стратегия.</p>' +
@@ -3172,6 +3212,7 @@ app.addEventListener('click', function (e) {
   if (!b || b.disabled) return;
   var a = b.getAttribute('data-a');
   var before = S ? S.phase : null;
+  if (b.hasAttribute('data-title')) { SETTINGS.title = b.getAttribute('data-title'); saveSettings(); Sound.click(); render(); return; }
   if (b.hasAttribute('data-hall')) { hallSel = b.getAttribute('data-hall'); hallMarkViewed(hallSel); Sound.click(); render(); return; }
   if (b.hasAttribute('data-dev')) { devAction(b.getAttribute('data-dev')); save(); render(); return; }
   if (b.hasAttribute('data-rewind')) { rewindTarget = +b.getAttribute('data-rewind'); popup = 'rewind'; Sound.click(); render(); return; }
@@ -3195,6 +3236,7 @@ app.addEventListener('click', function (e) {
     case 'devref': popup = 'devref'; break;
     case 'about': popup = 'about'; break;
     case 'ach': popup = 'ach'; break;
+    case 'settings': popup = 'settings'; break;
     case 'menu': popup = 'menu'; break;
     case 'sound': Sound.toggle(); break;
     case 'confirm-new': popup = 'confirm-new'; break;
