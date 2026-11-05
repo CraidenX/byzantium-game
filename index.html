@@ -876,6 +876,7 @@ var MONEY_EVENTS = [
       opt('Брат Димитрий', { threat: -4, west: -3 })
     ];
       if (s.flags.married) list.push(opt('Собственный сын от брака', { unity: 6, west: 1 }, { result: 'Город ликует: у империи есть будущее.' }));
+      if (s.used.theophilos) list.push(opt('Феофил Палеолог', { unity: 3, west: 2 }, { result: 'Учёный и воин — выбор, который понравился и знати, и книжникам.' }));
       if (s.used.kantakouzenos) list.push(opt('Димитрий Кантакузин', { unity: 4, morea: -3 }, { result: 'Знать довольна. Братья императора — нет.' }));
       if (s.used.notaras) list.push(opt('Лука Нотарас', { gold: 10, west: -3 }, { result: 'Нотарас щедр к будущей родне. Латиняне хмурятся.' }));
       return list; } },
@@ -942,12 +943,37 @@ var MONEY_EVENTS = [
       opt('Ещё сильнее испортить монету', { gold: 15, unity: -5, income: -1 }),
       opt('Перейти на дукаты', { west: 2, unity: -2 })
     ]; } },
-  { id: 'wall_cannons', w: 3, cond: function (s) { return H(s) >= 12; }, title: 'Пушки на стенах',
-    text: 'Оружейники предлагают поставить на башни пушки. Малые бьют метко, а большие — страшно сказать — трясут старую кладку при каждом выстреле.',
-    note: 'У защитников 1453 года были пушки, но крупные почти не стреляли: отдача расшатывала стены. Зато малые орудия и «огненные трубы» били по штурмующим в упор.',
+  { id: 'wall_cannons', w: 3, cond: function (s) { return H(s) >= 12; }, title: 'Старые машины или новые пушки?',
+    text: 'На совете спорят двое. Старый мастер стоит за баллисты и требушеты: надёжно, проверено веками. Молодой оружейник из Генуи предлагает кулеврины и пищали — дорого, зато бьют дальше и страшнее.',
+    note: 'В 1453 году защитники пользовались и тем и другим. Крупные пушки почти не стреляли — отдача расшатывала старые стены, а вот малые орудия и метательные машины били по штурмующим в упор.',
+    options: function (s) {
+      var both = s.gold >= 30 || s.west >= 60 || s.flags.urbanHired || s.flags.venFleet;
+      return [
+        opt('Старые метательные машины', { gold: -8 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.oldArt = true; }, result: 'Требушеты и баллисты встали на башни. При штурме они пригодятся.' }),
+        opt('Пушки и кулеврины', { gold: -14 }, { req: function (s) { return s.gold >= 14; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.wallGuns = true; }, result: 'Пушки на башнях у ворот Святого Романа. Они помогут против обстрела.' }),
+        opt('И то и другое', { gold: -20 }, { req: function (s) { return s.gold >= 20 && (s.gold >= 30 || s.west >= 60 || s.flags.urbanHired || s.flags.venFleet); },
+          reqText: both ? 'Не хватает золота' : 'Нужно 30 золота, или помощь Запада от 60, или Урбан на вашей стороне, или обещанный венецианский флот',
+          fn: function (s) { s.flags.oldArt = true; s.flags.wallGuns = true; } }),
+        opt('Обойтись луками и арбалетами', {})
+      ];
+    } },
+  { id: 'stanko', w: 3, cond: function (s) { return H(s) >= 4 && H(s) <= 12; }, title: 'Слухи из Болгарии',
+    text: 'Купцы с Дуная рассказывают о воеводе Станко, который засел в горах у Ловеча и бьёт турецкие отряды. Правда ли это или просто трактирная байка — никто толком не знает.',
+    note: 'В болгарских преданиях сохранилась память о воеводе Станко, долго не дававшем покоя туркам. Историки спорят, сколько в этих рассказах правды.',
     options: function () { return [
-      opt('Купить малые пушки', { gold: -12 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.wallGuns = true; }, result: 'Пушки стоят на башнях у ворот Святого Романа.' }),
-      opt('Обойтись луками и арбалетами', {})
+      opt('Тайно отправить золото', { gold: -8 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота', hint: 'Слух может оказаться пустым: шанс 50 на 50.',
+        fn: function (s) { if (rngFor(s, s.t * 100 + 17)() < 0.5) { s.threat = Math.max(0, s.threat - 6); return 'Станко существует! Турки стягивают к Ловечу войска. (Угроза −6)'; } return 'Гонец вернулся ни с чем: никакого воеводы в тех горах нет.'; } }),
+      opt('Отправить отряд добровольцев', { garrison: -300 }, { hint: 'Слух может оказаться пустым: шанс 50 на 50.',
+        fn: function (s) { if (rngFor(s, s.t * 100 + 18)() < 0.5) { s.threat = Math.max(0, s.threat - 8); s.unity = Math.min(100, s.unity + 2); return 'Отряд нашёл Станко, и вместе они разбили турецкий обоз. О подвиге поют на рынках. (Угроза −8, единство +2)'; } return 'Отряд проплутал в горах и вернулся поредевшим. Станко не нашли.'; } }),
+      opt('Не верить слухам', {})
+    ]; } },
+  { id: 'procession', w: 2, cond: function (s) { return H(s) >= 2; }, title: 'Крестный ход',
+    text: 'Митрополит предлагает пронести по стенам икону Богоматери Одигитрии — главную святыню города. По преданию, её написал сам евангелист Лука, и не раз она спасала Константинополь от врагов.',
+    note: 'Во время осады 1453 года икона на крестном ходу выскользнула из рук и упала, а потом город накрыл ливень с градом. Горожане сочли это дурным знамением.',
+    options: function () { return [
+      opt('Устроить крестный ход', { unity: 5 }, { hint: 'Небольшой шанс дурного знамения (20%).',
+        fn: function (s) { if (rngFor(s, s.t * 100 + 19)() < 0.2) { s.unity = Math.max(0, s.unity - 9); return 'Икона выскользнула из рук и упала на мостовую. По толпе прошёл стон. (Единство −9)'; } return 'Город молился весь день. Даже латиняне снимали шапки.'; } }),
+      opt('Не сейчас', {})
     ]; } },
   { id: 'citizens_walls', w: 4, cond: function (s) { return s.unity >= 60 && H(s) >= 4; }, title: 'Горожане чинят стены',
     text: 'После воскресной службы сотни горожан с лопатами и корзинами вышли к сухопутным стенам. Цеха каменщиков работают бесплатно, монахи носят землю. Просят только известь и камень.',
@@ -1228,7 +1254,8 @@ var WHEN = {
   heir: 'при Константине, с января 1451 (полугодие ≥ 14)', feud: 'единство < 40, с января 1446 (полугодие ≥ 4)',
   fleet: 'с января 1447 (полугодие ≥ 6)', fruzhin: 'до декабря 1445 (полугодие ≤ 2)', albanians1: 'с июля 1445 по июнь 1449 (полугодие 3–10)',
   albanians2: 'если албанцам дали землю; 1448–1452 (полугодие 9–16)', albanians3: 'если отказали стратиотам; с июля 1449 (полугодие ≥ 11)',
-  thasos: 'с января 1446 (полугодие ≥ 4)', coinage: 'в любое время', wall_cannons: 'с января 1450 (полугодие ≥ 12)',
+  thasos: 'с января 1446 (полугодие ≥ 4)', coinage: 'в любое время', wall_cannons: 'с января 1450 (полугодие ≥ 12); вариант «И то и другое» — при 30 золота, или Западе от 60, или Урбане у вас, или обещанном флоте',
+  stanko: 'с января 1446 по июнь 1450 (полугодие 4–12)', procession: 'с января 1445 (полугодие ≥ 2)',
   morea100: 'Морея впервые достигла 100, обязательно'
 };
 
@@ -1442,7 +1469,7 @@ function siegeScore(s) {
   var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) + Math.max(0, s.unity - 50) * 0.3 + (f.wallGuns ? 5 : 0) - 65; // при высоком единстве горожане сами заделывают проломы
   var naval = s.west * 0.8 + (f.chain ? 20 : 0) + (f.venFleet ? 15 : 0) + (f.loredanHarbor ? 10 : 0) + (f.cretans ? 8 : 0) + (f.fleetRefit ? 6 : 0) - 62;
   var mines = s.garrison / 100 + (f.grant ? (f.halfR ? 12 : 25) : 0) + (f.fewerMiners ? 8 : 0) - 82;
-  var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? (f.halfG ? 10 : 20) : 0) + (f.hosp ? 6 : 0) + (f.burgundians ? 5 : 0) + (f.orhanTurks ? 4 : 0) + (f.toledo ? 3 : 0) + (f.westMax ? 5 : 0) + (f.unityMax ? 5 : 0)
+  var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? (f.halfG ? 10 : 20) : 0) + (f.hosp ? 6 : 0) + (f.oldArt ? 4 : 0) + (f.burgundians ? 5 : 0) + (f.orhanTurks ? 4 : 0) + (f.toledo ? 3 : 0) + (f.westMax ? 5 : 0) + (f.unityMax ? 5 : 0)
     - Math.max(s.threat, 50) * 0.8 - 110;
   return { bombard: bombard, naval: naval, mines: mines, assault: assault };
 }
@@ -1600,7 +1627,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  EPILOGUES: EPILOGUES, VERSION: '0.8.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  EPILOGUES: EPILOGUES, VERSION: '0.9.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -1727,6 +1754,10 @@ HALL = HALL.concat([
     text: 'С 1388 года Афинами правил флорентийский род Аччайуоли, а Парфенон служил им собором. Герцоги лавировали между Мореей, Венецией и султаном. В 1456 году Мехмед взял Афины, а Парфенон стал мечетью.' },
   { id: 'epirus', group: 'Места', title: 'Эпир и Арта', open: ['epirus'], re: 'Эпир[а-я]*',
     text: 'Горная область на западе Греции, в XIII веке — соперник Никеи в борьбе за наследство Константинополя. В XV веке ею правили итальянцы Токко, считавшие себя греческими деспотами. Арта пала в 1449 году, последние крепости — в 1479-м.' },
+  { id: 'stanko', group: 'Люди', title: 'Воевода Станко', open: ['stanko'], re: '(воевод[а-я]* )?Станко',
+    text: 'Герой болгарских преданий: воевода, будто бы долго удерживавший горы у Ловеча и громивший турецкие отряды. Насколько эти рассказы правдивы, историки спорят — но для болгар он стал символом сопротивления.' },
+  { id: 'hodegetria', group: 'События', title: 'Икона Одигитрии', open: ['procession'], re: 'Одигитри[яиюей]',
+    text: 'Главная святыня Константинополя — икона Богоматери «Путеводительницы», по преданию написанная евангелистом Лукой. Её носили по стенам во время осад. В 1453 году турки, ворвавшись в город, разрубили икону на части.' },
   { id: 'theodore', group: 'Люди', title: 'Феодор II Палеолог', open: ['theodore', 'selymbria'], re: 'Феодор[а-я]*',
     text: 'Брат Иоанна VIII и Константина, почти тридцать лет деспот Мореи. Человек учёный и мрачный, однажды он даже хотел постричься в монахи. В 1443 году обменял Морею на Селимврию у столицы, надеясь унаследовать трон, но умер от чумы в 1448 году.' },
   { id: 'argyropoulos', group: 'Люди', title: 'Иоанн Аргиропул', open: ['argyropoulos'], re: 'Аргиропул[а-я]*',
@@ -1859,96 +1890,281 @@ function banner(x, y, kind) {
 function house(x, y, w, h) { return '<path d="M' + x + ' ' + y + ' v-' + h + ' l' + (w / 2) + ' -' + (h / 2.5) + ' l' + (w / 2) + ' ' + (h / 2.5) + ' v' + h + ' z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1"/>'; }
 function flame(x, y, k) { return '<path transform="translate(' + x + ' ' + y + ') scale(' + k + ')" d="M0 0 C-14 -10 -6 -26 -2 -38 C2 -26 10 -30 8 -44 C20 -30 18 -10 0 0 Z" fill="' + SC.fire + '" opacity=".85"/>'; }
 
+// ---------- Сцены v2: глубина, свет, узнаваемые детали ----------
+function eagle(cx, cy, k) {
+  var g = SC.gold;
+  return '<g transform="translate(' + cx + ' ' + cy + ') scale(' + k + ')" fill="' + g + '" stroke="' + SC.dark + '" stroke-width="1">' +
+    '<path d="M0 -10 L-60 -40 L-52 -18 L-70 -14 L-48 0 L-62 10 L-30 8 L-14 30 L0 22 L14 30 L30 8 L62 10 L48 0 L70 -14 L52 -18 L60 -40 Z"/>' +
+    '<path d="M-6 -12 Q-14 -34 -26 -38 Q-34 -40 -32 -32 Q-22 -30 -14 -12 Z"/><path d="M6 -12 Q14 -34 26 -38 Q34 -40 32 -32 Q22 -30 14 -12 Z"/>' +
+    '<circle cx="-29" cy="-37" r="4"/><circle cx="29" cy="-37" r="4"/>' +
+    '<path d="M-36 -46 h14 l-2 -6 l-5 3 l-5 -3 z M22 -46 h14 l-2 -6 l-5 3 l-5 -3 z"/>' +
+    '<path d="M-12 30 l-6 14 M12 30 l6 14" stroke="' + g + '" stroke-width="3"/></g>';
+}
+function sun(x, y, r, rays) {
+  return '<circle cx="' + x + '" cy="' + y + '" r="' + (r * 3) + '" fill="url(#glow)" opacity=".6"/>' +
+    (rays ? rep(12, function (i) { var a = i * Math.PI / 6; return '<line x1="' + (x + Math.cos(a) * (r + 6)) + '" y1="' + (y + Math.sin(a) * (r + 6)) + '" x2="' + (x + Math.cos(a) * (r + 26)) + '" y2="' + (y + Math.sin(a) * (r + 26)) + '" stroke="' + SC.light + '" stroke-width="2" opacity=".5"/>'; }) : '') +
+    '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + SC.light + '" opacity=".95"/>';
+}
+function glow(x, y, r, kind) { return '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="url(#' + (kind || 'glow') + ')"/>'; }
+function moon2(x, y) { return glow(x, y, 46) + moon(x, y); }
+// Феодосиевы стены: камень с красными кирпичными поясами
+function brick(x, y, w, h) {
+  return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1.1"/>' +
+    rep(Math.floor((h - 4) / 11), function (i) { return '<rect x="' + (x + 1) + '" y="' + (y + 6 + i * 11) + '" width="' + (w - 2) + '" height="2.2" fill="#8a3a28" opacity=".55"/>'; });
+}
+function tower(x, y, w, h, flag) {
+  return brick(x, y, w, h) + '<g fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1">' + crenels(x, y, w, w / 4) + '</g>' +
+    '<rect x="' + (x + w / 2 - 3) + '" y="' + (y + 12) + '" width="6" height="10" rx="3" fill="' + SC.gold + '" opacity=".75"/>' +
+    (flag ? '<g transform="translate(' + (x + w / 2) + ' ' + y + ') scale(.5) translate(' + (-(x + w / 2)) + ' ' + (-y) + ')">' + banner(x + w / 2, y - 4, flag) + '</g>' : '');
+}
+function theodosian(y, flag) {
+  var inner = y, outer = y + 26, moat = y + 62;
+  return brick(0, inner, 600, moat - inner) + '<g fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1">' + crenels(0, inner, 600, 15) + '</g>' +
+    [30, 170, 310, 450].map(function (x) { return tower(x, inner - 30, 36, 30 + moat - inner, flag); }).join('') +
+    brick(0, outer, 600, moat - outer) + '<g fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1">' + crenels(0, outer, 600, 12) + '</g>' +
+    [100, 240, 380, 520].map(function (x) { return tower(x, outer - 14, 24, 14 + moat - outer); }).join('') +
+    '<rect x="0" y="' + moat + '" width="600" height="' + (180 - moat) + '" fill="#141a2e"/>' +
+    rep(4, function (i) { return '<path d="M' + (i * 150 + 20) + ' ' + (moat + 7) + ' h60" stroke="' + SC.light + '" stroke-width="1" opacity=".35"/>'; });
+}
+function skyline(y, k, col) {
+  col = col || '#25153a';
+  var b = '<g fill="' + col + '">';
+  [[20, 30], [60, 18], [95, 40], [150, 24], [190, 34], [245, 20], [280, 46], [340, 26], [380, 36], [430, 22], [470, 30], [520, 18], [550, 38]].forEach(function (p) {
+    var x = p[0] * k, h = p[1] * k;
+    b += '<rect x="' + x + '" y="' + (y - h) + '" width="' + (26 * k) + '" height="' + h + '"/>';
+    if (p[1] > 30) b += '<path d="M' + x + ' ' + (y - h) + ' a' + (13 * k) + ' ' + (11 * k) + ' 0 0 1 ' + (26 * k) + ' 0 z"/>';
+  });
+  return b + '<rect x="0" y="' + y + '" width="600" height="2"/></g>';
+}
+function cypress(x, y, h) { return '<path d="M' + x + ' ' + y + ' Q' + (x - 7) + ' ' + (y - h * .55) + ' ' + x + ' ' + (y - h) + ' Q' + (x + 7) + ' ' + (y - h * .55) + ' ' + x + ' ' + y + ' Z" fill="#0f1a14" stroke="' + SC.gold + '" stroke-width=".6" opacity=".95"/>'; }
+function olive(x, y, r) { return '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + (y - r) + '" stroke="#3a2a1a" stroke-width="2"/><ellipse cx="' + x + '" cy="' + (y - r - r * .5) + '" rx="' + r + '" ry="' + (r * .7) + '" fill="#2a3a26" stroke="' + SC.gold + '" stroke-width=".5" opacity=".9"/>'; }
+function person(x, y, k, col, hood) {
+  return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')" fill="' + (col || SC.dark) + '" stroke="' + SC.gold + '" stroke-width=".8">' +
+    '<path d="M-9 0 L-6 -24 Q0 -28 6 -24 L9 0 Z"/>' + (hood ? '<path d="M-6 -24 Q-7 -38 0 -39 Q7 -38 6 -24 Z"/>' : '<circle cx="0" cy="-30" r="5"/>') + '</g>';
+}
+function domeBuilding(x, y, w, h) {
+  return '<g fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1"><rect x="' + x + '" y="' + (y - h) + '" width="' + w + '" height="' + h + '"/>' +
+    '<path d="M' + (x + w * .15) + ' ' + (y - h) + ' a' + (w * .35) + ' ' + (w * .3) + ' 0 0 1 ' + (w * .7) + ' 0 z"/></g>' +
+    '<path d="M' + (x + w / 2) + ' ' + (y - h - w * .3) + ' v-8 M' + (x + w / 2 - 3) + ' ' + (y - h - w * .3 - 5) + ' h6" stroke="' + SC.gold + '" stroke-width="1.4"/>';
+}
+function tugh(x, y) { return '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + (y - 64) + '" stroke="' + SC.gold + '" stroke-width="2"/><circle cx="' + x + '" cy="' + (y - 66) + '" r="3" fill="' + SC.gold + '"/><path d="M' + x + ' ' + (y - 62) + ' q-6 14 -2 24 q4 -10 4 -24 q2 14 6 22 q-2 -12 -8 -22" fill="#d8cdb8" opacity=".85"/>'; }
+function candle(x, y) { return glow(x, y - 12, 16) + '<rect x="' + (x - 2) + '" y="' + (y - 10) + '" width="4" height="10" fill="#e8dcc0"/><path d="M' + x + ' ' + (y - 17) + ' q-3 4 0 7 q3 -3 0 -7" fill="' + SC.fire + '"/>'; }
+function icon(x, y, w, h) {
+  return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + SC.gold + '" stroke="' + SC.dark + '"/>' +
+    '<rect x="' + (x + 3) + '" y="' + (y + 3) + '" width="' + (w - 6) + '" height="' + (h - 6) + '" fill="#b8902e"/>' +
+    '<circle cx="' + (x + w / 2) + '" cy="' + (y + h * .32) + '" r="' + (w * .22) + '" fill="#f0d78c" stroke="#8a6a1e"/>' +
+    '<path d="M' + (x + w * .25) + ' ' + (y + h - 3) + ' Q' + (x + w / 2) + ' ' + (y + h * .38) + ' ' + (x + w * .75) + ' ' + (y + h - 3) + ' Z" fill="#5e2276"/>' +
+    '<circle cx="' + (x + w / 2) + '" cy="' + (y + h * .33) + '" r="' + (w * .1) + '" fill="#c99a6e"/>';
+}
+
 var SCENES = {
-  walls: function () {
-    var towers = [40, 200, 360, 520];
-    return moon(470, 40) + stars(14, 1) +
-      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.5">' +
-      '<rect x="0" y="110" width="600" height="70"/>' + crenels(0, 110, 600, 16) +
-      towers.map(function (x) { return '<rect x="' + x + '" y="62" width="44" height="118"/>' + crenels(x, 62, 44, 11) +
-        '<rect x="' + (x + 17) + '" y="85" width="10" height="16" fill="' + SC.gold + '" opacity=".7"/>'; }).join('') + '</g>' +
-      '<path d="M0 168 H600" stroke="' + SC.gold + '" stroke-width="1" opacity=".5"/>';
-  },
+  walls: function () { return moon2(500, 34) + stars(16, 1) + skyline(96, 1, '#24143a') + theodosian(88, ''); },
   sea: function () {
-    return moon(90, 38) + stars(10, 2) +
-      galley(210, 128, 1.1, 'cross') + galley(430, 112, .75, 'cross') +
-      rep(5, function (i) { var y = 140 + i * 8; return '<path d="M0 ' + y + ' Q 37 ' + (y - 6) + ' 75 ' + y + ' T 150 ' + y + ' T 225 ' + y + ' T 300 ' + y + ' T 375 ' + y + ' T 450 ' + y + ' T 525 ' + y + ' T 600 ' + y + '" fill="none" stroke="' + SC.gold + '" stroke-width="1.2" opacity="' + (0.7 - i * 0.1) + '"/>'; });
+    return moon2(470, 38) + stars(12, 2) + skyline(100, .45, '#24143a') +
+      '<rect x="0" y="100" width="600" height="80" fill="#121a30"/>' +
+      rep(10, function (i) { return '<rect x="' + (462 - i % 3 * 3) + '" y="' + (106 + i * 7) + '" width="' + (16 + i % 3 * 6) + '" height="1.6" fill="' + SC.light + '" opacity="' + (0.6 - i * 0.05) + '"/>'; }) +
+      galley(360, 136, .7, 'cross') + galley(170, 150, 1.05, 'cross') + galley(520, 124, .45, 'cross') +
+      rep(6, function (i) { var y = 140 + i * 7; return '<path d="M0 ' + y + ' Q 37 ' + (y - 4) + ' 75 ' + y + ' T 150 ' + y + ' T 225 ' + y + ' T 300 ' + y + ' T 375 ' + y + ' T 450 ' + y + ' T 525 ' + y + ' T 600 ' + y + '" fill="none" stroke="' + SC.gold + '" stroke-width="1" opacity="' + (0.55 - i * 0.07) + '"/>'; });
   },
   army: function () {
-    return stars(10, 3) + '<rect x="0" y="160" width="600" height="20" fill="' + SC.dark + '"/>' +
-      banner(70, 160, 'cross') + banner(520, 160, 'cross') +
-      rep(11, function (i) { return soldier(130 + i * 34, 160, i % 2 ? 1 : 1.08); });
+    return stars(8, 3) + '<path d="M0 130 Q150 100 300 120 T600 112 V180 H0 Z" fill="#1e1230"/>' +
+      '<g opacity=".55">' + rep(15, function (i) { return soldier(40 + i * 38, 140, .62); }) + '</g>' +
+      '<rect x="0" y="166" width="600" height="14" fill="' + SC.dark + '"/>' +
+      '<line x1="300" y1="168" x2="300" y2="70" stroke="' + SC.gold + '" stroke-width="2.5"/><rect x="300" y="72" width="54" height="38" fill="#5e2276" stroke="' + SC.gold + '"/>' + eagle(327, 92, .3) +
+      banner(80, 168, 'cross') + banner(520, 168, 'cross') +
+      rep(11, function (i) { var x = 120 + i * 36; return x > 280 && x < 340 ? '' : soldier(x, 170, 1.05) + '<path d="M' + (x - 9) + ' ' + 156 + ' v-4 M' + (x - 13) + ' 154 h8" stroke="' + SC.light + '" stroke-width="1"/>'; }) +
+      rep(5, function (i) { return '<ellipse cx="' + (60 + i * 120) + '" cy="174" rx="50" ry="5" fill="#d8b45a" opacity=".07"/>'; });
   },
   court: function () {
-    return '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.5">' +
-      rep(6, function (i) { var x = 30 + i * 100; return '<path d="M' + x + ' 180 V90 A40 40 0 0 1 ' + (x + 80) + ' 90 V180" fill="none"/><rect x="' + (x - 6) + '" y="80" width="12" height="100"/>'; }) +
-      '<rect x="570" y="80" width="12" height="100"/>' +
-      '<path d="M270 180 V118 H330 V180" /><path d="M262 118 H338 L330 104 H270 Z"/><circle cx="300" cy="92" r="9"/>' +
-      '<path d="M286 84 l5 -9 l9 6 l9 -6 l5 9 z" fill="' + SC.gold + '"/></g>' +
-      '<rect x="0" y="176" width="600" height="4" fill="' + SC.gold + '" opacity=".6"/>';
+    return '<rect width="600" height="180" fill="#1a0e26"/>' +
+      rep(5, function (i) { var x = 40 + i * 110; return '<path d="M' + x + ' 150 V70 A45 40 0 0 1 ' + (x + 90) + ' 70 V150 Z" fill="#2a1a10" stroke="' + SC.gold + '"/>' +
+        rep(14, function (j) { return '<rect x="' + (x + 6 + (j % 7) * 12) + '" y="' + (44 + Math.floor(j / 7) * 12) + '" width="5" height="5" fill="' + SC.gold + '" opacity="' + (.25 + (j % 3) * .15) + '"/>'; }) +
+        '<rect x="' + (x - 6) + '" y="64" width="12" height="86" fill="#2a1638" stroke="' + SC.gold + '"/><path d="M' + (x - 9) + ' 64 h18 l-3 -6 h-12 z" fill="' + SC.gold + '"/>'; }) +
+      '<path d="M0 150 H600 V180 H0 Z" fill="#140a1c"/>' + rep(8, function (i) { return '<line x1="300" y1="150" x2="' + (i * 86 - 10) + '" y2="180" stroke="' + SC.gold + '" stroke-width=".6" opacity=".35"/>'; }) +
+      '<path d="M250 150 h100 v-10 h-100 z" fill="#5e2276" stroke="' + SC.gold + '"/>' +
+      '<g stroke="' + SC.gold + '" stroke-width="1.5"><line x1="262" y1="140" x2="262" y2="88"/><line x1="338" y1="140" x2="338" y2="88"/></g><path d="M256 90 Q300 50 344 90 Z" fill="#3a1a4a" stroke="' + SC.gold + '"/>' +
+      glow(300, 104, 30) + person(300, 140, 1.4, '#6d2a86') + '<circle cx="300" cy="96" r="9" fill="none" stroke="' + SC.light + '" stroke-width="1.5"/>' +
+      person(190, 150, 1.1) + person(160, 150, 1) + person(410, 150, 1.1) + person(440, 150, 1);
   },
   church: function () {
-    return stars(18, 4) + '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.6">' +
-      '<rect x="150" y="120" width="300" height="60"/>' +
-      '<path d="M190 120 A50 34 0 0 1 290 120 Z"/><path d="M310 120 A50 34 0 0 1 410 120 Z"/>' +
-      '<rect x="220" y="96" width="160" height="24"/><path d="M220 96 A80 64 0 0 1 380 96 Z"/>' +
-      rep(9, function (i) { return '<rect x="' + (234 + i * 15) + '" y="100" width="6" height="12" fill="' + SC.gold + '" opacity=".75"/>'; }) +
-      '</g><path d="M300 30 v-22 M291 18 h18" stroke="' + SC.light + '" stroke-width="3"/>' +
-      rep(6, function (i) { return '<rect x="' + (175 + i * 45) + '" y="140" width="10" height="22" rx="5" fill="' + SC.gold + '" opacity=".6"/>'; });
+    return stars(20, 4) + glow(300, 90, 90) +
+      '<g fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1.4">' +
+      '<rect x="140" y="118" width="320" height="62"/>' +
+      '<path d="M140 118 l-12 62 h24 z M460 118 l12 62 h-24 z"/>' +
+      '<path d="M180 118 A55 36 0 0 1 290 118 Z"/><path d="M310 118 A55 36 0 0 1 420 118 Z"/>' +
+      '<rect x="215" y="94" width="170" height="24"/><path d="M215 94 A85 66 0 0 1 385 94 Z"/></g>' +
+      rep(20, function (i) { return '<rect x="' + (222 + i * 8) + '" y="99" width="4" height="11" fill="' + SC.light + '" opacity="' + (.6 + (i % 3) * .13) + '"/>'; }) +
+      '<path d="M300 28 v-20 M291 16 h18" stroke="' + SC.light + '" stroke-width="3"/>' +
+      rep(7, function (i) { return '<rect x="' + (165 + i * 42) + '" y="138" width="9" height="22" rx="4.5" fill="' + SC.gold + '" opacity=".7"/>'; }) +
+      cypress(90, 180, 70) + cypress(115, 180, 52) + cypress(500, 180, 66) + cypress(525, 180, 48);
   },
   sultan: function () {
-    return moon(520, 36) + stars(12, 5) + '<rect x="0" y="162" width="600" height="18" fill="' + SC.dark + '"/>' +
-      [[80, 1], [200, 1.4], [330, 1], [450, 1.25]].map(function (t) {
-        var x = t[0], k = t[1];
-        return '<g transform="translate(' + x + ' 162) scale(' + k + ')"><path d="M-40 0 L0 -60 L40 0 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.4"/>' +
-          '<path d="M0 -60 V0" stroke="' + SC.gold + '" stroke-width="1"/><path d="M-8 0 L0 -18 L8 0" fill="' + SC.gold + '" opacity=".5"/></g>';
-      }).join('') + banner(140, 162, 'moon') + banner(560, 162, 'moon') +
-      '<circle cx="390" cy="158" r="5" fill="' + SC.fire + '" opacity=".9"/>';
+    return moon2(530, 34) + stars(12, 5) + '<rect x="0" y="160" width="600" height="20" fill="' + SC.dark + '"/>' +
+      [[90, .9], [470, 1]].map(function (t) { return '<g transform="translate(' + t[0] + ' 160) scale(' + t[1] + ')"><path d="M-36 0 L0 -52 L36 0 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2"/><path d="M-6 0 L0 -14 L6 0" fill="' + SC.gold + '" opacity=".5"/></g>'; }).join('') +
+      '<g transform="translate(290 160)"><path d="M-80 0 V-40 Q0 -90 80 -40 V0 Z" fill="#7a1e1e" stroke="' + SC.gold + '" stroke-width="1.5"/>' +
+      rep(7, function (i) { var x = -60 + i * 20; return '<path d="M' + x + ' 0 V-40 Q' + (x + 10) + ' -56 ' + (x + 10) + ' -62" stroke="#e8dcc0" stroke-width="4" fill="none" opacity=".55"/>'; }) +
+      '<path d="M-16 0 V-30 Q0 -40 16 -30 V0 Z" fill="' + SC.dark + '"/>' + glow(0, -12, 18) + '<circle cx="0" cy="-80" r="5" fill="' + SC.gold + '"/></g>' +
+      tugh(180, 160) + tugh(400, 160) + banner(560, 160, 'moon') + banner(30, 160, 'moon') +
+      glow(215, 156, 18, 'fireglow') + flame(215, 160, .4) + glow(360, 156, 18, 'fireglow') + flame(360, 160, .4);
   },
   morea: function () {
-    return '<circle cx="480" cy="46" r="20" fill="' + SC.light + '" opacity=".8"/>' +
-      '<path d="M0 180 L0 120 Q120 60 230 110 T420 100 Q520 70 600 115 V180 Z" fill="' + SC.mid + '" stroke="' + SC.gold + '" stroke-width="1.2"/>' +
-      '<path d="M0 180 V150 Q150 120 300 150 T600 145 V180 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1"/>' +
-      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2"><rect x="200" y="72" width="40" height="34"/>' + crenels(200, 72, 40, 10) + '</g>' +
-      house(250, 118, 22, 16) + house(280, 124, 20, 14) + house(168, 120, 22, 16) +
-      '<path d="M90 150 v-26" stroke="' + SC.gold + '" stroke-width="3"/><circle cx="90" cy="118" r="14" fill="' + SC.mid + '" stroke="' + SC.gold + '"/>';
+    return sun(500, 44, 18, false) +
+      '<path d="M0 120 L80 60 L150 95 L240 40 L330 90 L420 50 L520 85 L600 60 V180 H0 Z" fill="#2a1a40" opacity=".85"/>' +
+      '<path d="M0 140 L120 90 L220 120 L330 84 L460 118 L600 96 V180 H0 Z" fill="#22143a"/>' +
+      '<path d="M120 180 Q200 70 300 100 Q360 120 420 180 Z" fill="#1c1124" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      tower(232, 74, 30, 26) + '<path d="M262 92 Q300 104 330 140" stroke="' + SC.gold + '" stroke-width="2" fill="none"/>' +
+      domeBuilding(250, 134, 28, 16) + domeBuilding(300, 150, 26, 14) + house(200, 150, 20, 14) + house(330, 160, 18, 12) +
+      cypress(285, 132, 30) + cypress(220, 160, 26) +
+      '<path d="M0 180 V160 Q300 150 600 162 V180 Z" fill="#141a14"/>' + rep(9, function (i) { return olive(30 + i * 68, 176, 7 + (i % 2) * 2); });
   },
   disaster: function () {
-    return '<rect x="0" y="0" width="600" height="180" fill="#3a1418" opacity=".55"/>' +
-      rep(9, function (i) { return house(30 + i * 62, 172, 48 + (i % 3) * 8, 40 + (i % 2) * 18); }) +
-      flame(120, 132, 1.2) + flame(300, 120, 1.6) + flame(470, 128, 1.3) + flame(220, 140, .9) +
-      rep(4, function (i) { return '<circle cx="' + (150 + i * 110) + '" cy="' + (50 - i % 2 * 12) + '" r="' + (22 + i % 2 * 8) + '" fill="#1a0f22" opacity=".7"/>'; });
+    return '<rect width="600" height="180" fill="#4a1414" opacity=".5"/>' +
+      rep(5, function (i) { return '<ellipse cx="' + (90 + i * 110) + '" cy="' + (50 - (i % 2) * 14) + '" rx="' + (40 + i % 2 * 14) + '" ry="28" fill="#140c14" opacity=".7"/>'; }) +
+      glow(300, 130, 120, 'fireglow') +
+      rep(9, function (i) { var x = 20 + i * 64, h = 34 + (i % 3) * 12; return house(x, 176, 50, h) + '<rect x="' + (x + 20) + '" y="' + (176 - h * .6) + '" width="8" height="9" fill="' + SC.fire + '" opacity=".8"/>'; }) +
+      flame(110, 132, 1.3) + flame(300, 118, 1.8) + flame(470, 130, 1.4) + flame(210, 140, .9) + flame(390, 140, 1) +
+      rep(18, function (i) { return '<circle cx="' + ((i * 71) % 590 + 5) + '" cy="' + (40 + (i * 37) % 90) + '" r="1.4" fill="' + SC.fire + '" opacity=".8"/>'; }) +
+      person(250, 178, .8) + person(350, 178, .8);
   },
   gold: function () {
-    return stars(10, 6) + '<g stroke="' + SC.dark + '" stroke-width="1">' +
-      [[200, 6], [250, 9], [300, 7], [350, 11], [400, 5]].map(function (c) {
-        return rep(c[1], function (i) { return '<ellipse cx="' + c[0] + '" cy="' + (166 - i * 7) + '" rx="22" ry="6" fill="' + (i % 2 ? SC.gold : SC.light) + '"/>'; });
-      }).join('') + '</g>' +
-      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.5"><rect x="450" y="120" width="90" height="52"/><path d="M450 120 Q495 90 540 120"/>' +
-      '<rect x="488" y="132" width="14" height="16" fill="' + SC.gold + '"/></g>';
+    return '<rect width="600" height="180" fill="#1a1020"/>' + candle(90, 120) + candle(520, 116) +
+      '<rect x="0" y="140" width="600" height="40" fill="#2a1a10" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.6"><path d="M330 140 v-50 h120 v50 z"/><path d="M330 90 L346 52 L466 52 L450 90" fill="#2a1638"/></g>' +
+      rep(26, function (i) { return '<ellipse cx="' + (342 + (i % 9) * 12 + (Math.floor(i / 9) % 2) * 6) + '" cy="' + (92 - Math.floor(i / 9) * 5) + '" rx="7" ry="3" fill="' + (i % 2 ? SC.gold : SC.light) + '" stroke="#6a4a10" stroke-width=".5"/>'; }) +
+      [[170, 6], [210, 10], [250, 7]].map(function (c) { return rep(c[1], function (i) { return '<ellipse cx="' + c[0] + '" cy="' + (138 - i * 5) + '" rx="15" ry="4.5" fill="' + (i % 2 ? SC.gold : SC.light) + '" stroke="#6a4a10" stroke-width=".6"/>'; }); }).join('') +
+      '<g stroke="' + SC.gold + '" stroke-width="1.5" fill="none"><line x1="530" y1="140" x2="530" y2="72"/><line x1="500" y1="76" x2="560" y2="76"/><path d="M490 100 Q500 108 510 100 M550 96 Q560 104 570 96"/><line x1="500" y1="76" x2="490" y2="100"/><line x1="500" y1="76" x2="510" y2="100"/><line x1="560" y1="76" x2="550" y2="96"/><line x1="560" y1="76" x2="570" y2="96"/></g>';
   },
   letter: function () {
-    return stars(12, 7) + '<g stroke="' + SC.gold + '" stroke-width="1.5">' +
-      '<path d="M160 50 H440 V150 H160 Z" fill="#e8d6a8"/><rect x="146" y="40" width="20" height="120" rx="10" fill="' + SC.mid + '"/><rect x="434" y="40" width="20" height="120" rx="10" fill="' + SC.mid + '"/></g>' +
-      rep(6, function (i) { return '<line x1="190" y1="' + (68 + i * 12) + '" x2="' + (410 - (i % 3) * 30) + '" y2="' + (68 + i * 12) + '" stroke="#5a4630" stroke-width="2" opacity=".55"/>'; }) +
-      '<circle cx="380" cy="132" r="14" fill="#9a2a2a" stroke="' + SC.dark + '"/><path d="M470 150 L540 40" stroke="' + SC.light + '" stroke-width="3"/><path d="M540 40 q10 30 -18 50" fill="none" stroke="' + SC.light + '" stroke-width="2"/>';
+    return '<rect width="600" height="180" fill="#1a1020"/>' + candle(80, 128) +
+      '<rect x="0" y="128" width="600" height="52" fill="#2a1a10" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      '<g stroke="' + SC.gold + '" stroke-width="1.2"><path d="M170 36 H430 V150 H170 Z" fill="#e8d6a8"/><rect x="156" y="28" width="20" height="130" rx="10" fill="#4a2a5a"/><rect x="424" y="28" width="20" height="130" rx="10" fill="#4a2a5a"/></g>' +
+      '<rect x="192" y="50" width="22" height="22" fill="' + SC.gold + '" stroke="#5a4630"/><path d="M197 68 L203 54 L209 68" stroke="#5e2276" stroke-width="2" fill="none"/>' +
+      rep(8, function (i) { return '<line x1="' + (i < 2 ? 222 : 192) + '" y1="' + (56 + i * 10) + '" x2="' + (408 - (i % 3) * 24) + '" y2="' + (56 + i * 10) + '" stroke="#5a4630" stroke-width="2" opacity=".55"/>'; }) +
+      '<path d="M370 140 l-6 30 M386 140 l8 28" stroke="#9a2a2a" stroke-width="3"/><circle cx="378" cy="138" r="13" fill="#9a2a2a" stroke="' + SC.dark + '"/><circle cx="378" cy="138" r="7" fill="none" stroke="#c84a4a"/>' +
+      '<path d="M490 140 h30 v-14 h-30 z" fill="' + SC.dark + '" stroke="' + SC.gold + '"/><path d="M506 128 L560 40" stroke="' + SC.light + '" stroke-width="2.5"/><path d="M560 40 q12 26 -14 46 q4 -22 14 -46" fill="' + SC.light + '" opacity=".8"/>';
   },
   cannon: function () {
-    return stars(10, 8) + '<rect x="0" y="160" width="600" height="20" fill="' + SC.dark + '"/>' +
-      '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="2"><path d="M140 130 L390 108 L396 152 L146 160 Z"/><rect x="380" y="100" width="30" height="58" rx="4"/>' +
-      '<circle cx="190" cy="164" r="16"/><circle cx="330" cy="164" r="16"/>' + rep(6, function (i) { return '<line x1="' + (170 + i * 36) + '" y1="128" x2="' + (172 + i * 36) + '" y2="158"/>'; }) + '</g>' +
-      '<circle cx="460" cy="110" r="22" fill="#3a2a40" opacity=".8"/><circle cx="500" cy="92" r="28" fill="#3a2a40" opacity=".6"/><circle cx="545" cy="70" r="20" fill="#3a2a40" opacity=".45"/>' +
-      '<circle cx="430" cy="128" r="8" fill="' + SC.fire + '"/>';
+    return stars(8, 8) + '<g opacity=".6">' + tower(470, 70, 30, 60) + brick(500, 90, 100, 40) + tower(560, 74, 30, 56) + '</g>' +
+      '<rect x="0" y="160" width="600" height="20" fill="' + SC.dark + '"/>' +
+      '<rect x="120" y="150" width="270" height="12" fill="#3a2410" stroke="' + SC.gold + '"/>' +
+      '<g fill="#3a3540" stroke="' + SC.gold + '" stroke-width="1.6"><path d="M120 124 L370 104 L376 148 L126 156 Z"/><rect x="362" y="96" width="34" height="60" rx="5"/></g>' +
+      rep(6, function (i) { return '<line x1="' + (150 + i * 38) + '" y1="' + (120 - i * 2.5) + '" x2="' + (152 + i * 38) + '" y2="' + (154 - i * .5) + '" stroke="' + SC.gold + '" stroke-width="3"/>'; }) +
+      '<circle cx="410" cy="126" r="10" fill="' + SC.fire + '"/>' + glow(410, 126, 30, 'fireglow') +
+      '<circle cx="450" cy="112" r="24" fill="#3a2a40" opacity=".75"/><circle cx="490" cy="94" r="30" fill="#3a2a40" opacity=".55"/><circle cx="530" cy="70" r="22" fill="#3a2a40" opacity=".4"/>' +
+      rep(6, function (i) { return '<circle cx="' + (40 + (i % 3) * 22 + Math.floor(i / 3) * 11) + '" cy="' + (152 - Math.floor(i / 3) * 18) + '" r="10" fill="#8a8580" stroke="' + SC.dark + '"/>'; }) +
+      person(100, 160, 1) + person(420, 162, .9);
   },
   battle: function () {
-    return '<rect x="0" y="150" width="600" height="30" fill="' + SC.dark + '"/>' +
-      banner(60, 150, 'cross') + banner(120, 150, 'cross') + banner(480, 150, 'moon') + banner(540, 150, 'moon') +
-      '<g stroke="' + SC.light + '" stroke-width="5" stroke-linecap="round"><line x1="250" y1="40" x2="350" y2="140"/><line x1="350" y1="40" x2="250" y2="140"/></g>' +
-      '<g stroke="' + SC.gold + '" stroke-width="7" stroke-linecap="round"><line x1="262" y1="116" x2="286" y2="140"/><line x1="338" y1="116" x2="314" y2="140"/></g>' +
-      flame(180, 150, .8) + flame(420, 150, .8);
+    return '<rect width="600" height="180" fill="#5a2a1a" opacity=".35"/>' + sun(300, 120, 30, false) +
+      '<path d="M0 150 Q300 136 600 150 V180 H0 Z" fill="' + SC.dark + '"/>' +
+      rep(7, function (i) { return soldier(40 + i * 32, 162, .85); }) + rep(7, function (i) { return soldier(370 + i * 32, 162, .85); }) +
+      '<g stroke="' + SC.light + '" stroke-width="2.5" stroke-linecap="round"><line x1="250" y1="150" x2="330" y2="96"/><line x1="350" y1="150" x2="270" y2="96"/><line x1="240" y1="152" x2="310" y2="110"/><line x1="360" y1="152" x2="290" y2="110"/></g>' +
+      banner(70, 150, 'cross') + banner(150, 150, 'cross') + banner(450, 150, 'moon') + banner(530, 150, 'moon') +
+      rep(6, function (i) { return '<ellipse cx="' + (150 + i * 60) + '" cy="150" rx="40" ry="10" fill="#d8b45a" opacity=".08"/>'; });
+  },
+  monastery: function () {
+    return '<rect width="600" height="180" fill="#160c1e"/>' + '<path d="M60 180 V40 A240 60 0 0 1 540 40 V180" fill="#22142e" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      rep(5, function (i) { return icon(110 + i * 80, 52, 50, 66); }) +
+      '<rect x="90" y="122" width="420" height="8" fill="' + SC.gold + '" opacity=".7"/>' +
+      rep(6, function (i) { return candle(120 + i * 72, 150); }) +
+      person(160, 180, 1.3, '#120c16', true) + person(300, 180, 1.4, '#120c16', true) + person(440, 180, 1.3, '#120c16', true);
+  },
+  procession: function () {
+    return stars(10, 10) + domeBuilding(250, 112, 100, 34) + skyline(112, .8, '#22143a') +
+      '<rect x="0" y="150" width="600" height="30" fill="' + SC.dark + '"/>' +
+      '<line x1="300" y1="150" x2="300" y2="96" stroke="' + SC.gold + '" stroke-width="2"/>' + glow(300, 70, 40) + icon(282, 46, 36, 48) +
+      rep(14, function (i) { var x = 30 + i * 41; return x > 280 && x < 320 ? '' : person(x, 168, .9 + (i % 2) * .1) + candle(x + 8, 146); }) +
+      '<path d="M200 150 v-50 M190 112 h20 M400 150 v-50 M390 112 h20" stroke="' + SC.gold + '" stroke-width="2"/>';
+  },
+  city: function () {
+    return sun(520, 40, 14, false) +
+      '<g fill="#22143a" stroke="' + SC.gold + '" stroke-width=".8" opacity=".8">' + rep(9, function (i) { return '<path d="M' + (i * 70) + ' 120 V70 H' + (i * 70 + 70) + ' V120 H' + (i * 70 + 56) + ' V88 A21 21 0 0 0 ' + (i * 70 + 14) + ' 88 V120 Z"/>'; }) + '</g>' +
+      rep(8, function (i) { var x = 10 + i * 76, h = 40 + (i % 3) * 14; return house(x, 168, 60, h) + '<rect x="' + (x + 8) + '" y="' + (168 - h * .55) + '" width="8" height="9" fill="' + SC.gold + '" opacity=".6"/>'; }) +
+      '<path d="M120 140 h80 l-8 -12 h-64 z" fill="#8a2a2a" stroke="' + SC.gold + '"/><path d="M380 140 h80 l-8 -12 h-64 z" fill="#2a5a8a" stroke="' + SC.gold + '"/>' +
+      '<rect x="0" y="166" width="600" height="14" fill="' + SC.dark + '"/>' + person(180, 172, .9) + person(230, 172, .8, '#3a2a1a') + person(420, 172, .9) + person(470, 172, .85, '#2a3a2a') +
+      olive(320, 168, 12);
+  },
+  ruins: function () {
+    return moon2(480, 40) + stars(14, 11) +
+      '<path d="M0 180 V150 Q300 138 600 152 V180 Z" fill="#141a14"/>' +
+      [[90, 70], [150, 44], [210, 86], [270, 30], [380, 60], [440, 78]].map(function (c) { var x = c[0], h = c[1];
+        return '<rect x="' + x + '" y="' + (150 - h) + '" width="18" height="' + h + '" fill="#2a2030" stroke="' + SC.gold + '"/>' + rep(Math.floor(h / 12), function (i) { return '<line x1="' + (x + 4 + (i % 2) * 5) + '" y1="' + (150 - h + 4) + '" x2="' + (x + 4 + (i % 2) * 5) + '" y2="148" stroke="' + SC.dark + '" opacity=".4"/>'; }) +
+          '<path d="M' + (x - 2) + ' ' + (150 - h) + ' l3 ' + (h > 50 ? -6 : 4) + ' l8 3 l9 -5 z" fill="#2a2030" stroke="' + SC.gold + '"/>'; }).join('') +
+      '<path d="M200 64 A40 30 0 0 1 280 64" stroke="' + SC.gold + '" stroke-width="7" fill="none" opacity=".6"/>' +
+      '<rect x="300" y="138" width="40" height="12" fill="#2a2030" stroke="' + SC.gold + '" transform="rotate(-8 320 144)"/>' +
+      '<path d="M520 150 l8 -14 h18 l6 8 l-4 6 M528 150 v8 M544 150 v8" stroke="' + SC.gold + '" fill="' + SC.dark + '"/>' +
+      rep(12, function (i) { return '<path d="M' + (20 + i * 50) + ' 152 l2 -7 l2 7 l2 -5 l2 5" stroke="#3a5a2a" fill="none"/>'; });
+  },
+  mine: function () {
+    return '<path d="M0 180 V90 L120 30 L240 70 L360 20 L480 60 L600 40 V180 Z" fill="#2a1e30" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      '<path d="M250 180 V110 A50 46 0 0 1 350 110 V180 Z" fill="#0a060c"/>' + glow(300, 140, 50) +
+      '<g stroke="#5a3a1a" stroke-width="6"><line x1="256" y1="180" x2="256" y2="106"/><line x1="344" y1="180" x2="344" y2="106"/><line x1="250" y1="104" x2="350" y2="104"/></g>' +
+      rep(6, function (i) { return '<path d="M' + (90 + i * 80) + ' ' + (110 + (i % 3) * 18) + ' l12 -6 l6 10" stroke="' + SC.light + '" stroke-width="2" fill="none" opacity=".75"/>'; }) +
+      '<line x1="0" y1="174" x2="250" y2="174" stroke="' + SC.gold + '" stroke-width="1.5"/><line x1="0" y1="178" x2="250" y2="178" stroke="' + SC.gold + '" stroke-width="1.5"/>' +
+      '<path d="M140 168 h50 l-6 -20 h-38 z" fill="#3a2410" stroke="' + SC.gold + '"/><circle cx="150" cy="172" r="5" fill="' + SC.dark + '" stroke="' + SC.gold + '"/><circle cx="180" cy="172" r="5" fill="' + SC.dark + '" stroke="' + SC.gold + '"/>' +
+      rep(5, function (i) { return '<ellipse cx="' + (152 + i * 7) + '" cy="147" rx="5" ry="3" fill="' + SC.gold + '"/>'; }) +
+      person(220, 178, 1) + '<path d="M228 150 l14 -14 m-6 -2 l10 6" stroke="' + SC.light + '" stroke-width="2"/>' + person(400, 178, 1);
+  },
+  council: function () {
+    return '<rect width="600" height="180" fill="#160c1e"/>' +
+      rep(3, function (i) { var x = 110 + i * 150; return '<path d="M' + x + ' 90 V40 A30 30 0 0 1 ' + (x + 60) + ' 40 V90 Z" fill="#2a1a40" stroke="' + SC.gold + '"/>' + moon(x + 40, 40); }) +
+      candle(100, 112) + candle(500, 112) +
+      '<path d="M120 130 L480 130 L540 176 L60 176 Z" fill="#3a2410" stroke="' + SC.gold + '" stroke-width="1.4"/>' +
+      '<path d="M220 136 L380 136 L400 166 L200 166 Z" fill="#e8d6a8" stroke="' + SC.gold + '"/>' +
+      '<path d="M235 150 Q270 140 300 152 T365 146 M250 160 L280 148 M330 144 l10 12" stroke="#5a4630" stroke-width="1.5" fill="none"/><circle cx="300" cy="152" r="4" fill="#9a2a2a"/>' +
+      person(160, 132, 1.2, '#5e2276') + person(230, 128, 1.1, '#2a3a5a') + person(370, 128, 1.1, '#5a3a1a') + person(440, 132, 1.2, '#2a4a2a');
+  },
+  harbor: function () {
+    return moon2(110, 36) + stars(10, 12) +
+      '<path d="M300 100 Q420 60 600 70 V100 Z" fill="#22143a" stroke="' + SC.gold + '" stroke-width=".8"/>' +
+      '<rect x="452" y="30" width="26" height="52" fill="#1c1124" stroke="' + SC.gold + '"/><path d="M448 30 L465 6 L482 30 Z" fill="#2a1638" stroke="' + SC.gold + '"/><rect x="460" y="44" width="6" height="9" fill="' + SC.gold + '" opacity=".7"/>' +
+      brick(330, 74, 240, 22) +
+      '<rect x="0" y="100" width="600" height="80" fill="#121a30"/>' +
+      '<path d="M0 104 Q150 112 300 106 T600 104" stroke="' + SC.gold + '" stroke-width="2" stroke-dasharray="3 5" fill="none"/>' +
+      galley(140, 140, .8, 'cross') + galley(380, 132, .6, 'cross') + galley(520, 150, .7, '') +
+      rep(5, function (i) { var y = 146 + i * 7; return '<path d="M0 ' + y + ' Q 75 ' + (y - 4) + ' 150 ' + y + ' T 300 ' + y + ' T 450 ' + y + ' T 600 ' + y + '" fill="none" stroke="' + SC.gold + '" stroke-width="1" opacity="' + (0.5 - i * 0.08) + '"/>'; });
+  },
+  fortress: function () {
+    return moon2(80, 34) + stars(10, 13) +
+      '<path d="M0 180 V120 Q120 90 260 80 L300 180 Z" fill="#22143a" stroke="' + SC.gold + '" stroke-width="1"/>' +
+      '<rect x="0" y="130" width="600" height="50" fill="#121a30"/>' +
+      tower(110, 60, 40, 70, 'moon') + tower(180, 50, 46, 80, 'moon') + brick(150, 90, 30, 40) + tower(240, 74, 34, 56, '') +
+      '<path d="M420 120 Q520 100 600 106 V130 H420 Z" fill="#1e1230" stroke="' + SC.gold + '" stroke-width=".6"/>' +
+      galley(420, 154, .55, 'cross') + '<circle cx="300" cy="140" r="4" fill="' + SC.dark + '"/><path d="M296 150 q4 -6 8 0" stroke="' + SC.light + '" fill="none"/>' +
+      '<circle cx="380" cy="148" r="12" fill="#3a2a40" opacity=".6"/>';
+  },
+  acropolis: function () {
+    return '<rect width="600" height="180" fill="#5a2a1a" opacity=".3"/>' + sun(470, 60, 20, false) +
+      '<path d="M120 180 L190 98 L410 98 L480 180 Z" fill="#2a1e30" stroke="' + SC.gold + '"/>' +
+      '<path d="M220 98 V74 H380 V98" fill="none"/><path d="M214 74 L300 52 L386 74 Z" fill="#3a2e3a" stroke="' + SC.gold + '"/>' +
+      '<rect x="214" y="72" width="172" height="6" fill="#3a2e3a" stroke="' + SC.gold + '"/>' +
+      rep(10, function (i) { return '<rect x="' + (222 + i * 16.5) + '" y="78" width="7" height="20" fill="#d8cdb8" opacity=".75"/>'; }) +
+      rep(8, function (i) { return olive(30 + i * 80 + (i > 3 ? 20 : 0), 178, 8); });
   }
 };
-// Какое событие какой сценой иллюстрировать (позже сюда можно вписать путь к настоящей картинке)
+
+// Сцены концовок
+SCENES.fallCity = function () { return '<rect width="600" height="180" fill="#4a1414" opacity=".5"/>' + glow(300, 80, 140, 'fireglow') + flame(140, 70, 1.6) + flame(330, 60, 2.2) + flame(500, 72, 1.5) + rep(4, function (i) { return '<ellipse cx="' + (120 + i * 130) + '" cy="' + (30 + (i % 2) * 10) + '" rx="40" ry="22" fill="#140c14" opacity=".7"/>'; }) + theodosian(96, 'moon'); };
+SCENES.exodus = function () { return '<rect width="600" height="180" fill="#5a2a1a" opacity=".4"/>' + sun(470, 104, 32, false) + '<path d="M0 180 V92 h20 v-14 h14 v14 h30 v-26 l18 -14 l18 14 v26 h26 v40 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2"/><rect x="0" y="110" width="600" height="70" fill="#2a1420" opacity=".8"/>' + galley(300, 140, .8, 'cross') + galley(420, 126, .55, 'cross') + galley(520, 118, .4, 'cross') + rep(10, function (i) { return '<rect x="' + (455 + (i % 3) * 3) + '" y="' + (112 + i * 6) + '" width="' + (24 - i) + '" height="1.6" fill="' + SC.light + '" opacity=".5"/>'; }); };
+SCENES.dawn = function () { return sun(380, 50, 22, true) + '<rect width="600" height="180" fill="#d8b45a" opacity=".07"/>' + theodosian(98, 'cross') + '<path d="M540 92 l12 -14 l12 14 z M562 92 l8 -10 l8 10 z" fill="none" stroke="' + SC.gold + '" opacity=".5"/>'; };
+SCENES.eagle = function () { return sun(300, 84, 54, true) + eagle(300, 86, 1.3) + '<path d="M0 180 V150 H140 A36 26 0 0 1 212 150 H388 A36 26 0 0 1 460 150 H600 V180 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2"/>'; };
+SCENES.emptyChest = function () { return '<rect width="600" height="180" fill="#120a18"/>' + '<rect x="0" y="140" width="600" height="40" fill="#2a1a10" stroke="' + SC.gold + '"/>' + '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.8"><path d="M240 140 v-54 h130 v54 z"/><path d="M240 86 L258 40 L388 40 L370 86" fill="#2a1638"/></g><rect x="246" y="92" width="118" height="44" fill="#0a060c"/><ellipse cx="420" cy="140" rx="10" ry="3" fill="' + SC.gold + '"/><path d="M90 20 l40 40 M130 20 l-40 40 M110 16 v48 M86 40 h48 M98 28 l24 24" stroke="' + SC.gold + '" stroke-width=".7" opacity=".4"/><rect x="510" y="110" width="6" height="30" fill="#e8dcc0" opacity=".5"/>'; };
+SCENES.mob = function () { return '<rect width="600" height="180" fill="#3a1418" opacity=".45"/>' + skyline(110, 1, '#22143a') + glow(300, 120, 120, 'fireglow') + rep(18, function (i) { var x = 15 + i * 34, y = 176 - (i % 3) * 6; return person(x, y, .9 + (i % 2) * .15, '#1a0f22'); }) + [70, 200, 330, 460, 560].map(function (x) { return '<line x1="' + x + '" y1="150" x2="' + (x + 6) + '" y2="104" stroke="' + SC.gold + '" stroke-width="3"/>' + glow(x + 6, 100, 18, 'fireglow') + flame(x + 6, 106, .6); }).join(''); };
+SCENES.armyAtWalls = function () { return moon2(320, 32) + '<g>' + tower(10, 60, 40, 120) + brick(50, 84, 70, 96) + tower(110, 66, 36, 114) + '</g>' + rep(3, function (r) { return rep(12, function (i) { return soldier(190 + i * 34 + r * 10, 128 + r * 22, .6 + r * .12); }); }) + tugh(240, 130) + banner(420, 120, 'moon') + banner(560, 120, 'moon'); };
+
+var SCENE_DEFS = '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1850"/><stop offset="1" stop-color="#170c20"/></linearGradient>' +
+  '<radialGradient id="glow"><stop offset="0" stop-color="#f0d78c" stop-opacity=".55"/><stop offset="1" stop-color="#f0d78c" stop-opacity="0"/></radialGradient>' +
+  '<radialGradient id="fireglow"><stop offset="0" stop-color="#e0703a" stop-opacity=".6"/><stop offset="1" stop-color="#e0703a" stop-opacity="0"/></radialGradient>' +
+  '<radialGradient id="vign" cx=".5" cy=".5" r=".75"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>' +
+  '<pattern id="tess" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#fff" opacity=".03"/></pattern></defs>';
+function sceneSVG(key) {
+  var name = SCENE_OF[key] || key, f = SCENES[name] || SCENES.walls;
+  return '<svg class="scene" viewBox="0 0 600 180" aria-hidden="true" preserveAspectRatio="xMidYMid slice">' + SCENE_DEFS +
+    '<rect width="600" height="180" fill="url(#sky)"/>' + f() + '<rect width="600" height="180" fill="url(#tess)"/><rect width="600" height="180" fill="url(#vign)"/>' +
+    '<rect x="2" y="2" width="596" height="176" fill="none" stroke="#d8b45a" stroke-width="2" opacity=".8"/><rect x="7" y="7" width="586" height="166" fill="none" stroke="#d8b45a" stroke-width=".6" opacity=".4"/>' +
+    [[8, 8], [592, 8], [8, 172], [592, 172]].map(function (c) { return '<rect x="' + (c[0] - 3) + '" y="' + (c[1] - 3) + '" width="6" height="6" fill="#d8b45a" transform="rotate(45 ' + c[0] + ' ' + c[1] + ')"/>'; }).join('') + '</svg>';
+}
+
 var SCENE_OF = {
   varna: 'battle', hexamilion: 'cannon', kosovo: 'battle', john_death: 'court', murad_death: 'sultan', orhan: 'court', chain: 'sea',
   rumeli: 'walls', urban: 'cannon', union_procl: 'church', giustiniani: 'sea', grant: 'walls',
@@ -1964,72 +2180,21 @@ var SCENE_OF = {
   epirus: 'battle', plethon2: 'letter', plethon3: 'morea', turahan: 'battle',
   hosp_pirates: 'sea', theodore: 'court', selymbria: 'walls', pantokrator: 'church', palaces: 'court', aqueduct: 'walls', thieves: 'disaster',
   pastures: 'morea', empty_quarters: 'walls', spolia: 'walls', argyropoulos: 'letter', hesychasm: 'church', heir: 'court', feud: 'court',
-  fleet: 'sea', fruzhin: 'battle', albanians1: 'morea', albanians2: 'army', albanians3: 'disaster', thasos: 'gold', coinage: 'gold', wall_cannons: 'cannon', citizens_walls: 'walls', volunteers: 'army', donations: 'gold',
+  fleet: 'sea', fruzhin: 'battle', albanians1: 'morea', albanians2: 'army', albanians3: 'disaster', thasos: 'gold', coinage: 'gold', wall_cannons: 'cannon', stanko: 'battle', procession: 'church', citizens_walls: 'walls', volunteers: 'army', donations: 'gold',
   // экраны осады и концовок
   siege: 'cannon', fall: 'disaster', heroic: 'walls', repelled: 'church', alt: 'church', bankrupt: 'gold', revolt: 'disaster', early: 'sultan'
 };
-function sceneSVG(key) {
-  var name = SCENE_OF[key] || key, f = SCENES[name] || SCENES.walls;
-  return '<svg class="scene" viewBox="0 0 600 180" aria-hidden="true" preserveAspectRatio="xMidYMid slice"><defs>' +
-    '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1850"/><stop offset="1" stop-color="#170c20"/></linearGradient>' +
-    '<pattern id="tess" width="7" height="7" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#fff" opacity=".035"/></pattern></defs>' +
-    '<rect width="600" height="180" fill="url(#sky)"/>' + f() + '<rect width="600" height="180" fill="url(#tess)"/>' +
-    '<rect x="2" y="2" width="596" height="176" fill="none" stroke="#d8b45a" stroke-width="2" opacity=".75"/></svg>';
-}
-
-// ---------- Сцены концовок ----------
-function eagle(cx, cy, k) {
-  var g = SC.gold;
-  return '<g transform="translate(' + cx + ' ' + cy + ') scale(' + k + ')" fill="' + g + '" stroke="' + SC.dark + '" stroke-width="1">' +
-    '<path d="M0 -10 L-60 -40 L-52 -18 L-70 -14 L-48 0 L-62 10 L-30 8 L-14 30 L0 22 L14 30 L30 8 L62 10 L48 0 L70 -14 L52 -18 L60 -40 Z"/>' +
-    '<path d="M-6 -12 Q-14 -34 -26 -38 Q-34 -40 -32 -32 Q-22 -30 -14 -12 Z"/><path d="M6 -12 Q14 -34 26 -38 Q34 -40 32 -32 Q22 -30 14 -12 Z"/>' +
-    '<circle cx="-29" cy="-37" r="4"/><circle cx="29" cy="-37" r="4"/>' +
-    '<path d="M-36 -46 h14 l-2 -6 l-5 3 l-5 -3 z M22 -46 h14 l-2 -6 l-5 3 l-5 -3 z"/>' +
-    '<path d="M-12 30 l-6 14 M12 30 l6 14" stroke="' + g + '" stroke-width="3"/></g>';
-}
-function sun(x, y, r, rays) {
-  return (rays ? rep(12, function (i) { var a = i * Math.PI / 6; return '<line x1="' + (x + Math.cos(a) * (r + 6)) + '" y1="' + (y + Math.sin(a) * (r + 6)) + '" x2="' + (x + Math.cos(a) * (r + 26)) + '" y2="' + (y + Math.sin(a) * (r + 26)) + '" stroke="' + SC.light + '" stroke-width="2" opacity=".55"/>'; }) : '') +
-    '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + SC.light + '" opacity=".9"/>';
-}
-function wallsLine(y, flag) {
-  return '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.4"><rect x="0" y="' + y + '" width="600" height="' + (180 - y) + '"/>' + crenels(0, y, 600, 16) +
-    [60, 250, 440].map(function (x) { return '<rect x="' + x + '" y="' + (y - 40) + '" width="40" height="' + (220 - y) + '"/>' + crenels(x, y - 40, 40, 10) + (flag ? banner(x + 20, y - 40, flag) : ''); }).join('') + '</g>';
-}
-SCENES.fallCity = function () {
-  return '<rect width="600" height="180" fill="#4a1414" opacity=".45"/>' + flame(140, 100, 1.8) + flame(330, 92, 2.2) + flame(500, 104, 1.6) +
-    rep(4, function (i) { return '<circle cx="' + (120 + i * 130) + '" cy="' + (40 + (i % 2) * 10) + '" r="' + (26 + (i % 2) * 8) + '" fill="#1a0f22" opacity=".7"/>'; }) + wallsLine(128, 'moon');
-};
-SCENES.exodus = function () {
-  return '<rect width="600" height="180" fill="#5a2a1a" opacity=".35"/>' + sun(470, 120, 34, false) +
-    '<path d="M0 180 V96 h20 v-14 h14 v14 h30 v-26 l18 -14 l18 14 v26 h26 v40 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2"/>' +
-    galley(300, 140, .8, 'cross') + galley(420, 128, .55, 'cross') + galley(520, 120, .4, 'cross') +
-    rep(4, function (i) { var y = 150 + i * 7; return '<path d="M120 ' + y + ' Q 240 ' + (y - 5) + ' 360 ' + y + ' T 600 ' + y + '" fill="none" stroke="' + SC.gold + '" stroke-width="1" opacity="' + (0.6 - i * 0.1) + '"/>'; });
-};
-SCENES.dawn = function () {
-  return sun(370, 58, 24, true) + '<rect width="600" height="180" fill="#d8b45a" opacity=".06"/>' + wallsLine(128, 'cross') +
-    '<path d="M520 112 l14 -16 l14 16 z M548 112 l10 -12 l10 12 z" fill="none" stroke="' + SC.gold + '" opacity=".5"/>';
-};
-SCENES.eagle = function () {
-  return sun(300, 84, 54, true) + eagle(300, 86, 1.3) +
-    '<path d="M0 180 V150 H140 A36 26 0 0 1 212 150 H388 A36 26 0 0 1 460 150 H600 V180 Z" fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.2"/>';
-};
-SCENES.emptyChest = function () {
-  return stars(10, 9) + '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="2"><rect x="230" y="100" width="140" height="66"/>' +
-    '<path d="M230 100 L250 40 L390 40 L370 100" fill="' + SC.mid + '"/><rect x="290" y="112" width="20" height="20"/></g>' +
-    '<ellipse cx="420" cy="166" rx="12" ry="4" fill="' + SC.gold + '"/><path d="M110 30 l40 40 M150 30 l-40 40 M130 26 v48 M106 50 h48" stroke="' + SC.gold + '" stroke-width=".8" opacity=".4"/>';
-};
-SCENES.mob = function () {
-  return '<rect width="600" height="180" fill="#3a1418" opacity=".4"/>' + wallsLine(90, '') +
-    rep(16, function (i) { var x = 20 + i * 37, y = 172 - (i % 3) * 6; return '<circle cx="' + x + '" cy="' + (y - 22) + '" r="9" fill="#1a0f22" stroke="' + SC.gold + '" stroke-width=".8"/><path d="M' + (x - 13) + ' ' + y + ' q13 -26 26 0" fill="#1a0f22" stroke="' + SC.gold + '" stroke-width=".8"/>'; }) +
-    [80, 230, 380, 520].map(function (x) { return '<line x1="' + x + '" y1="150" x2="' + (x + 6) + '" y2="108" stroke="' + SC.gold + '" stroke-width="3"/>' + flame(x + 6, 110, .6); }).join('');
-};
-SCENES.armyAtWalls = function () {
-  return moon(300, 34) + '<g fill="' + SC.dark + '" stroke="' + SC.gold + '" stroke-width="1.4"><rect x="0" y="70" width="150" height="110"/>' + crenels(0, 70, 150, 15) + '</g>' +
-    rep(3, function (r) { return rep(12, function (i) { return soldier(200 + i * 34 + r * 10, 132 + r * 22, .6 + r * .12); }); }) +
-    banner(250, 120, 'moon') + banner(420, 120, 'moon') + banner(560, 120, 'moon');
-};
 SCENE_OF.fall = 'fallCity'; SCENE_OF.heroic = 'exodus'; SCENE_OF.repelled = 'dawn'; SCENE_OF.alt = 'eagle';
 SCENE_OF.bankrupt = 'emptyChest'; SCENE_OF.revolt = 'mob'; SCENE_OF.early = 'armyAtWalls';
+
+// Новые сцены v2 для событий
+['pantokrator', 'hesychasm', 'athos', 'mark', 'scholarius', 'gennadios_debate', 'patriarch'].forEach(function (k) { SCENE_OF[k] = 'monastery'; });
+['thieves', 'empty_quarters', 'coinage', 'famine', 'aqueduct', 'pastures'].forEach(function (k) { SCENE_OF[k] = 'city'; });
+['palaces', 'spolia'].forEach(function (k) { SCENE_OF[k] = 'ruins'; });
+['thasos', 'brankovic'].forEach(function (k) { SCENE_OF[k] = 'mine'; });
+['census', 'heir', 'feud'].forEach(function (k) { SCENE_OF[k] = 'council'; });
+['galata', 'lomellino', 'minotto', 'chain'].forEach(function (k) { SCENE_OF[k] = 'harbor'; });
+SCENE_OF.procession = 'procession'; SCENE_OF.rumeli = 'fortress'; SCENE_OF.athens = 'acropolis';
 
 // ---------- Портреты для Исторического зала ----------
 // hat: skiadion (высокая шляпа с полями, как у Иоанна VIII на медали Пизанелло), stemma (императорский венец),
@@ -2167,9 +2332,10 @@ var PORTRAITS = {
   theodore:   { mood: 'weary', hat: 'stemma', beard: 'long', robe: '#4a2a5a' },
   argyropoulos: { mood: 'calm', hat: 'cap', beard: 'short', robe: '#2a3a5a', capColor: '#1e2a40' },
   palamas:    { mood: 'kind', hat: 'hood', beard: 'long', robe: '#141018' },
-  fruzhin:    { mood: 'fierce', hat: 'fur', beard: 'short', robe: '#2a4a2a' }
+  fruzhin:    { mood: 'fierce', hat: 'fur', beard: 'short', robe: '#2a4a2a' },
+  stanko:     { mood: 'fierce', hat: 'fur', beard: 'mustache', robe: '#4a3a2a' }
 };
-var HALL_SCENE = { walls: 'walls', horn: 'sea', morea: 'morea', galata: 'sea', rumeli: 'walls', union: 'church', varna: 'battle', siege: 'cannon', trebizond: 'sea', blacksea: 'sea', athens: 'morea', epirus: 'battle', albanians: 'morea', selymbria: 'walls', pantokrator: 'church', thasos: 'gold', aqueduct: 'walls', palace: 'court' };
+var HALL_SCENE = { walls: 'walls', horn: 'harbor', morea: 'morea', galata: 'harbor', rumeli: 'fortress', union: 'church', varna: 'battle', siege: 'cannon', trebizond: 'harbor', blacksea: 'sea', athens: 'acropolis', epirus: 'battle', albanians: 'morea', selymbria: 'walls', pantokrator: 'monastery', thasos: 'mine', aqueduct: 'city', palace: 'ruins', hodegetria: 'procession' };
 
 // ---------- Подсказки к ресурсам ----------
 var TIPS = {
@@ -2596,7 +2762,7 @@ function renderPopup() {
       '<p><b>Обстрел</b> = стены × 0,8 + 15 (Урбан у вас) − 15 (Урбан у султана) + (единство − 50) × 0,3, если единство выше 50 + 5 (пушки на стенах) − 65</p>' +
       '<p><b>Золотой Рог</b> = Запад × 0,8 + 20 (цепь) + 15 (венецианские галеры) + 10 (Лоредан охраняет гавань) + 8 (критяне) + 6 (снаряжённые галеры) − 62</p>' +
       '<p><b>Подкопы</b> = гарнизон ÷ 100 + 25 (Грант; 12, если опоздал) + 8 (Бранкович тянет время) − 82</p>' +
-      '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (иоанниты) + 5 (бургундцы) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 50) − 110</p>' +
+      '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (иоанниты) + 4 (старые машины) + 5 (бургундцы) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 50) − 110</p>' +
       '<p>К каждому этапу добавляется случайность: ±15, у штурма ±20. Этап удался, если вышло 0 или больше. Каждый удачный этап из первых трёх даёт штурму +6.</p>' +
       '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +10 (поправка на округление указов).</p>' +
       '<p>Перед осадой Морея 60+ присылает 500 воинов, Морея 100 — 1000; албанские стратиоты добавляют 300.</p></div>';
@@ -2618,6 +2784,7 @@ function renderPopup() {
       '<p><b style="color:var(--gold2);font-weight:normal">«Последние годы Константинополя»</b> — пошаговая историческая стратегия.</p>' +
       '<p>© 2026 Craiden_x. Все права защищены.<br>Идея, геймдизайн и историческая редактура — Craiden_x.<br>Код, тексты и иллюстрации созданы при участии Claude (Anthropic).</p>' +
       '<div class="lh" style="margin-top:12px"><span>ЧТО НОВОГО</span></div><ul>' +
+      '<li><b>0.9.0</b> — все картинки перерисованы подробнее, 9 новых сцен, слухи о воеводе Станко, спор старой и пороховой артиллерии, крестный ход, Феофил в наследниках.</li>' +
       '<li><b>0.8.0</b> — мимика портретов, ресурсы видны в окне события, 23 события (жизнь города, Селимврия, албанцы, Аргиропул, наследник), 10 статей в зале.</li>' +
       '<li><b>0.7.0</b> — 20 новых статей и портретов в зале, подсветка имён в событиях с подсказкой, единство помогает при обстреле, 3 события для единства.</li>' +
       '<li><b>0.6.0</b> — портреты в зале, судьба империи после победы (5 эпилогов), 11 событий, видно «было → стало» после решения, версия игры.</li>' +
