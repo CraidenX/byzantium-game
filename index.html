@@ -162,6 +162,7 @@ details.log summary{cursor:pointer;color:var(--gold2);font-size:17px}
 .toolbar .btn{padding:7px 12px;font-size:15px}
 .scene{display:block;width:100%;height:auto;aspect-ratio:10/3;border-radius:8px;margin:2px 0 12px;box-shadow:0 4px 14px rgba(0,0,0,.45)}
 .chip .to{opacity:.75}
+.mini{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:14px;color:var(--text);background:#140b1c;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:0 0 10px}
 .lore{color:#fff4cf;border-bottom:1px dotted #f0d78c;cursor:help}
 .lore-tip{position:fixed;z-index:50;display:none;gap:10px;align-items:flex-start;background:#120a18;border:1px solid var(--gold);border-radius:10px;
   padding:10px;font-size:13.5px;line-height:1.4;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.6);pointer-events:none}
@@ -774,6 +775,180 @@ var ALLY_EVENTS = [
 ];
 
 var MONEY_EVENTS = [
+  { id: 'hosp_pirates', w: 2, cond: function (s) { return H(s) >= 4; }, title: 'Родосские корсары',
+    text: 'Галеры рыцарей с Родоса захватили в Мраморном море турецкое торговое судно — у самого Константинополя. Султанский кади пишет, что греки покрывают разбойников.',
+    note: 'Иоанниты с Родоса вели на море постоянную малую войну с мусульманами и не всегда разбирали, чей груз берут.',
+    options: function () { return [
+      opt('Выкупить груз и вернуть туркам', { gold: -8, threat: -6 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' }),
+      opt('Сделать вид, что ничего не знаем', { threat: 5 }),
+      opt('Взять долю добычи', { gold: 10, threat: 8, west: 2 })
+    ]; } },
+  { id: 'theodore', w: 5, cond: function (s) { return H(s) >= 7 && H(s) <= 8; }, title: 'Смерть деспота Феодора',
+    text: 'В Селимврии от чумы умер деспот Феодор, брат императора, когда-то правивший Мореей. Его люди ждут приказа, а Димитрий уже шлёт гонцов: хочет занять город сам.',
+    note: 'Феодор II умер летом 1448 года, за несколько месяцев до Иоанна VIII. Селимврия на Мраморном море была его последним уделом.',
+    options: function () { return [
+      opt('Пышные похороны, отряд Феодора — в столицу', { gold: -6, garrison: 200, unity: 4 }, { req: function (s) { return s.gold >= 6; }, reqText: 'Не хватает золота' }),
+      opt('Впустить Димитрия в Селимврию', { threat: -3, morea: -2 }, { fn: function (s) { s.flags.demSely = true; } }),
+      opt('Поставить имперского наместника', { garrison: -150, unity: 2 }, { fn: function (s) { s.flags.selyImperial = true; } })
+    ]; } },
+  { id: 'selymbria', w: 4, cond: function (s) { return s.used.theodore && H(s) >= 9 && H(s) <= 12; }, title: 'Спор из-за Селимврии',
+    text: function (s) { return (s.flags.demSely ? 'Димитрий засел в Селимврии и не собирается уходить. ' : '') + 'Фома и Димитрий спорят, кому достанется Селимврия. Советники предлагают третий путь: подчинить город прямо столице.'; },
+    note: 'Селимврия стояла в двух днях пути от Константинополя. Турки взяли её весной 1453 года, ещё до начала осады.',
+    options: function () { return [
+      opt('Отдать Фоме', { morea: 3, west: 2, unity: -2 }),
+      opt('Отдать Димитрию', { threat: -3, west: -2, morea: -2 }),
+      opt('Подчинить столице', { income: 2, morea: -4, unity: -1 })
+    ]; } },
+  { id: 'pantokrator', w: 3, cond: function (s) { return H(s) >= 6; }, title: 'Монахи Пантократора',
+    text: 'Монастырь Пантократора стал штабом противников унии. Монахи раздают листки против «латинской ереси» и не пускают к себе священников, служивших с латинянами.',
+    note: 'Пантократор — огромный монастырь XII века с усыпальницей Комнинов. Именно там жил Геннадий Схоларий, вокруг него собиралась толпа в декабре 1452 года.',
+    options: function () { return [
+      opt('Договориться с игуменом', { gold: -5, unity: 4, west: -2 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Не хватает золота' }),
+      opt('Запретить листки', { unity: -5, west: 3 }),
+      opt('Не трогать монахов', { unity: 1, west: -1 })
+    ]; } },
+  { id: 'palaces', w: 2, title: 'Руины Большого дворца',
+    text: 'Большой дворец, где семь веков жили императоры, лежит в развалинах: мозаики осыпаются, в залах пасутся козы. Венецианский купец предлагает купить мрамор колонн.',
+    note: 'Палеологи жили во Влахернском дворце у северной стены. Испанский путешественник Перо Тафур, побывавший в городе в 1437 году, писал, что дворец хранит следы былого великолепия, но лежит в запустении.',
+    options: function () { return [
+      opt('Продать мрамор', { gold: 10, unity: -2 }),
+      opt('Отреставрировать часть залов', { gold: -10, unity: 4, west: 2 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
+      opt('Оставить как есть', {})
+    ]; } },
+  { id: 'aqueduct', w: 2, title: 'Акведук Валента',
+    text: 'Акведук Валента, тысячу лет поивший город, течёт: вода уходит в землю, не доходя до цистерн. Без ремонта к лету фонтаны пересохнут.',
+    note: 'Акведук построили в IV веке. Город веками жил запасами подземных цистерн — некоторые, как Базилика-цистерна, сохранились до наших дней.',
+    options: function () { return [
+      opt('Починить акведук', { gold: -8, unity: 4 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' }),
+      opt('Обойтись цистернами', { unity: -3 })
+    ]; } },
+  { id: 'thieves', w: 2, cond: function (s) { return H(s) >= 2; }, title: 'Ночные воры',
+    text: 'В пустых кварталах у стены Константина хозяйничает шайка: грабят лавки, сбывают добро генуэзцам в Галату. Купцы жалуются эпарху города.',
+    note: 'Константинополь XV века был городом-призраком: среди садов и развалин легко было спрятаться.',
+    options: function () { return [
+      opt('Ночные дозоры', { garrison: -100, unity: 3 }),
+      opt('Повесить пойманных у Золотых ворот', { unity: 1 }),
+      opt('Простить и записать в ополчение', { garrison: 200, unity: -2 })
+    ]; } },
+  { id: 'pastures', w: 2, title: 'Пастбища в стенах',
+    text: 'Внутри стен — целые деревни: огороды, виноградники, пастбища. Монастыри просят отдать им в аренду пустые земли у Семибашенного замка.',
+    note: 'Путешественники XV века удивлялись: внутри Константинополя было больше полей, чем домов. Город состоял из нескольких посёлков, разделённых садами.',
+    options: function () { return [
+      opt('Сдать монастырям', { gold: 8, unity: 1 }),
+      opt('Раздать беднякам под огороды', { unity: 4, gold: -2 })
+    ]; } },
+  { id: 'empty_quarters', w: 2, cond: function (s) { return H(s) >= 4; }, title: 'Пустые кварталы',
+    text: 'Из Фракии бегут крестьяне, которых сгоняют с земли турки. Их можно поселить в опустевших кварталах у Влахерн — им нужны только крыша и немного зерна.',
+    note: 'Население Константинополя сократилось примерно с 400 тысяч в XII веке до 40–50 тысяч к 1453 году.',
+    options: function () { return [
+      opt('Поселить беженцев', { gold: -5, garrison: 200, unity: 2 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Не хватает золота' }),
+      opt('Город не прокормит лишних', { unity: -2 })
+    ]; } },
+  { id: 'spolia', w: 3, cond: function (s) { return H(s) >= 8; }, title: 'Камни для стен',
+    text: 'Каменщики просят разрешения разобрать на камень руины древних построек — старого ипподрома и заброшенных храмов. Стены нужны, но святыни трогать страшно.',
+    note: 'Строить из обломков старых зданий было обычным делом. В Феодосиевых стенах до сих пор видны колонны и плиты с античными надписями.',
+    options: function () { return [
+      opt('Разобрать ипподром и языческие руины', { walls: 6 }),
+      opt('Разобрать и заброшенные храмы', { walls: 11, unity: -5 }),
+      opt('Не трогать старину', {})
+    ]; } },
+  { id: 'argyropoulos', w: 4, cond: function (s) { return s.flags.pl1 && H(s) >= 10 && H(s) <= 16; }, title: 'Иоанн Аргиропул',
+    text: 'Молодой учёный Иоанн Аргиропул преподаёт в школе при монастыре Продрома и спорит с учениками о Платоне так, что слушать приходят архонты. Говорят, он мог бы продолжить дело Плифона.',
+    note: 'Аргиропул учил в Константинополе до 1453 года, а потом много лет преподавал греческий и философию во Флоренции. Его учеником был молодой Лоренцо Медичи.',
+    options: function () { return [
+      opt('Поставить его во главе школы', { gold: -8, west: 3, unity: -1 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.argyro = true; } }),
+      opt('Отправить учиться в Италию', { west: 4 }),
+      opt('Не до книжников', {})
+    ]; } },
+  { id: 'hesychasm', w: 2, title: 'Молчальники Афона',
+    text: 'Монахи-исихасты Афона учат «умной молитве» Григория Паламы: в тишине, повторяя имя Христа, можно узреть свет Фаворский. Латиняне называют это суеверием, и каждый спор об унии упирается в Паламу.',
+    note: 'Палама умер в 1359 году и уже через девять лет был причислен к святым. Для противников унии его учение было знаменем православия.',
+    options: function () { return [
+      opt('Поддержать афонские монастыри', { gold: -6, unity: 6, west: -2 }, { req: function (s) { return s.gold >= 6; }, reqText: 'Не хватает золота' }),
+      opt('Пригласить латинских богословов на спор', { west: 3, unity: -3 }),
+      opt('Не вмешиваться', {})
+    ]; } },
+  { id: 'heir', w: 5, cond: function (s) { return s.flags.constantine && H(s) >= 14; }, title: 'Кто наследует Константину?',
+    text: 'Детей у императора нет. Если он погибнет, империю ждёт смута. Совет просит назвать наследника сейчас, пока не поздно.',
+    note: 'В действительности наследника так и не назвали. После 1453 года титул императора безуспешно пытались продать или передать сын Фомы, Андрей Палеолог.',
+    options: function (s) { var list = [
+      opt('Брат Фома', { west: 3, morea: 3, unity: -1 }),
+      opt('Брат Димитрий', { threat: -4, west: -3 })
+    ];
+      if (s.flags.married) list.push(opt('Собственный сын от брака', { unity: 6, west: 1 }, { result: 'Город ликует: у империи есть будущее.' }));
+      if (s.used.kantakouzenos) list.push(opt('Димитрий Кантакузин', { unity: 4, morea: -3 }, { result: 'Знать довольна. Братья императора — нет.' }));
+      if (s.used.notaras) list.push(opt('Лука Нотарас', { gold: 10, west: -3 }, { result: 'Нотарас щедр к будущей родне. Латиняне хмурятся.' }));
+      return list; } },
+  { id: 'feud', w: 3, cond: function (s) { return s.unity < 40 && H(s) >= 4; }, title: 'Палеологи против Кантакузинов',
+    text: 'Старая вражда двух родов вспыхнула снова: на свадьбе у Влахерн Палеологи и Кантакузины схватились за ножи. Город делится на партии.',
+    note: 'Палеологи и Кантакузины воевали друг с другом ещё в XIV веке — гражданские войны тех лет и открыли туркам дорогу в Европу.',
+    options: function () { return [
+      opt('Поддержать Палеологов', { unity: -3, garrison: 200 }),
+      opt('Поддержать Кантакузинов', { unity: -2, gold: 8 }),
+      opt('Помирить оба рода', { gold: -8, unity: 6 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' })
+    ]; } },
+  { id: 'fleet', w: 3, cond: function (s) { return H(s) >= 6; }, title: 'Остатки флота',
+    text: 'От флота, когда-то правившего морем, осталось десяток галер, и те гниют у причалов. Мегадука предлагает их снарядить.',
+    note: 'В 1453 году у греков было около десяти кораблей. Вместе с венецианцами и генуэзцами они держали цепь Золотого Рога.',
+    options: function () { return [
+      opt('Снарядить галеры для обороны', { gold: -12 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.fleetRefit = true; }, result: 'Галеры готовы встать у цепи.' }),
+      opt('Водить на них хлебные караваны', { gold: -5, income: 1 }, { req: function (s) { return s.gold >= 5; }, reqText: 'Не хватает золота' }),
+      opt('Сдать венецианцам в аренду', { gold: 8 })
+    ]; } },
+  { id: 'fruzhin', w: 4, cond: function (s) { return H(s) <= 2; }, title: 'Царевич Фружин',
+    text: 'Фружин, сын последнего болгарского царя Ивана Шишмана, всю жизнь воевал с турками. Теперь он снова собирает людей в горах Болгарии и просит золота.',
+    note: 'Фружин поднимал восстания в Болгарии и сражался вместе с венграми. Болгарское царство пало в 1396 году, но надежда на его возрождение жила ещё десятилетиями.',
+    options: function () { return [
+      opt('Помочь золотом', { gold: -8, threat: -5 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота' }),
+      opt('Пожелать удачи', { west: 1 })
+    ]; } },
+  { id: 'albanians1', w: 3, cond: function (s) { return H(s) >= 3 && H(s) <= 10; }, title: 'Албанцы в Морее',
+    text: 'В Морею приходят албанские кланы со стадами: просят пустые земли и обещают служить деспотам с оружием в руках.',
+    note: 'Деспоты Мореи с конца XIV века звали албанцев заселять опустевшие земли. К XV веку их там были десятки тысяч.',
+    options: function () { return [
+      opt('Дать им землю', { morea: 6, unity: -1 }, { fn: function (s) { s.flags.albSettled = true; } }),
+      opt('Отказать', { morea: -2 })
+    ]; } },
+  { id: 'albanians2', w: 4, cond: function (s) { return s.flags.albSettled && H(s) >= 9 && H(s) <= 16; }, title: 'Албанские стратиоты',
+    text: 'Вожди албанских кланов требуют прав: освобождения от налогов и своей доли в добыче. Взамен они готовы стать лёгкой конницей деспотов.',
+    note: 'Албанские всадники-стратиоты позже прославились на службе Венеции по всей Италии.',
+    options: function () { return [
+      opt('Принять их условия', { gold: -8, morea: 6 }, { req: function (s) { return s.gold >= 8; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.albAllies = true; }, result: 'Албанцы клянутся в верности. Морея пришлёт к осаде больше людей.' }),
+      opt('Отказать', { morea: -4 }, { fn: function (s) { s.flags.albRestless = true; } })
+    ]; } },
+  { id: 'albanians3', w: 5, cond: function (s) { return s.flags.albRestless && H(s) >= 11; }, title: 'Мятеж албанцев',
+    text: 'Обиженные албанцы восстали: жгут деревни, осаждают замки и требуют своего. Деспоты в панике.',
+    note: 'После 1453 года албанцы Мореи действительно восстали под началом Петра Буа. Деспотам пришлось звать на помощь турок.',
+    options: function () { return [
+      opt('Откупиться', { gold: -12, morea: -3 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота' }),
+      opt('Подавить силой', { morea: -10, garrison: -200 })
+    ]; } },
+  { id: 'thasos', w: 2, cond: function (s) { return H(s) >= 4; }, title: 'Золото Тасоса',
+    text: 'Генуэзские сеньоры Гаттилузи, хозяева Тасоса, хотят снова открыть древние золотые копи острова и зовут императора в долю.',
+    note: 'О золоте Тасоса писал ещё Геродот. В Средние века рудники почти истощились.',
+    options: function () { return [
+      opt('Вложить деньги', { gold: -12 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота', hint: 'Исход неизвестен: копи могут оказаться пустыми, окупиться или давать доход.',
+        fn: function (s) { var x = rngFor(s, s.t * 100 + 13)();
+          if (x < 1 / 3) return 'Копи пусты. Деньги пропали.';
+          if (x < 2 / 3) { s.gold += 14; return 'Золото есть, но плохое. Вложения едва окупились. (Казна +14)'; }
+          s.incomeMod += 2; return 'Жила найдена! Копи будут приносить доход. (Доход +2 за полгода)'; } }),
+      opt('Не рисковать', {})
+    ]; } },
+  { id: 'coinage', w: 2, title: 'Порченая монета',
+    text: 'Золотой иперпир давно не чеканят, а серебряные ставратоны становятся всё тоньше. Купцы на рынке требуют платить венецианскими дукатами.',
+    note: 'Византия перестала чеканить золотую монету около 1354 года — впервые за тысячу лет. В 1453 году в ходу были серебряный ставратон и итальянские деньги.',
+    options: function () { return [
+      opt('Чеканить честный ставратон', { gold: -10, unity: 3, income: 1 }, { req: function (s) { return s.gold >= 10; }, reqText: 'Не хватает золота' }),
+      opt('Ещё сильнее испортить монету', { gold: 15, unity: -5, income: -1 }),
+      opt('Перейти на дукаты', { west: 2, unity: -2 })
+    ]; } },
+  { id: 'wall_cannons', w: 3, cond: function (s) { return H(s) >= 12; }, title: 'Пушки на стенах',
+    text: 'Оружейники предлагают поставить на башни пушки. Малые бьют метко, а большие — страшно сказать — трясут старую кладку при каждом выстреле.',
+    note: 'У защитников 1453 года были пушки, но крупные почти не стреляли: отдача расшатывала стены. Зато малые орудия и «огненные трубы» били по штурмующим в упор.',
+    options: function () { return [
+      opt('Купить малые пушки', { gold: -12 }, { req: function (s) { return s.gold >= 12; }, reqText: 'Не хватает золота', fn: function (s) { s.flags.wallGuns = true; }, result: 'Пушки стоят на башнях у ворот Святого Романа.' }),
+      opt('Обойтись луками и арбалетами', {})
+    ]; } },
   { id: 'citizens_walls', w: 4, cond: function (s) { return s.unity >= 60 && H(s) >= 4; }, title: 'Горожане чинят стены',
     text: 'После воскресной службы сотни горожан с лопатами и корзинами вышли к сухопутным стенам. Цеха каменщиков работают бесплатно, монахи носят землю. Просят только известь и камень.',
     note: 'Ремонт стен всегда был делом всего города. Надписи на башнях до сих пор хранят имена императоров и простых горожан, оплативших починку.',
@@ -1045,6 +1220,15 @@ var WHEN = {
   black_sea: 'с июля 1450 по декабрь 1452 (полугодие 13–17)', athens: '1445–1447 (полугодие 2–6)', epirus: '1448–1449 (полугодие 8–11)',
   plethon2: 'если поддержали реформы Плифона; 1447–1450 (полугодие 6–13)', plethon3: 'если сохранили «Законы»; 1449–1452 (полугодие 10–16)',
   citizens_walls: 'единство ≥ 60, с января 1446 (полугодие ≥ 4)', volunteers: 'единство ≥ 55, с января 1447 (полугодие ≥ 6)', donations: 'единство ≥ 65, в любое время',
+  hosp_pirates: 'с января 1446 (полугодие ≥ 4)', theodore: 'середина 1447 — середина 1448 (полугодие 7–8)',
+  selymbria: 'после «Смерти деспота Феодора»; 1448–1450 (полугодие 9–12)', pantokrator: 'с января 1447 (полугодие ≥ 6)',
+  palaces: 'в любое время', aqueduct: 'в любое время', thieves: 'с января 1445 (полугодие ≥ 2)', pastures: 'в любое время',
+  empty_quarters: 'с января 1446 (полугодие ≥ 4)', spolia: 'с января 1448 (полугодие ≥ 8)',
+  argyropoulos: 'если поддержали реформы Плифона; 1449–1452 (полугодие 10–16)', hesychasm: 'в любое время',
+  heir: 'при Константине, с января 1451 (полугодие ≥ 14)', feud: 'единство < 40, с января 1446 (полугодие ≥ 4)',
+  fleet: 'с января 1447 (полугодие ≥ 6)', fruzhin: 'до декабря 1445 (полугодие ≤ 2)', albanians1: 'с июля 1445 по июнь 1449 (полугодие 3–10)',
+  albanians2: 'если албанцам дали землю; 1448–1452 (полугодие 9–16)', albanians3: 'если отказали стратиотам; с июля 1449 (полугодие ≥ 11)',
+  thasos: 'с января 1446 (полугодие ≥ 4)', coinage: 'в любое время', wall_cannons: 'с января 1450 (полугодие ≥ 12)',
   morea100: 'Морея впервые достигла 100, обязательно'
 };
 
@@ -1255,8 +1439,8 @@ function endTurn(s) {
 function siegeScore(s) {
   // Без случайности — для подсказок и балансировки. Каждое число — запас прочности этапа (больше нуля — успех).
   var f = s.flags;
-  var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) + Math.max(0, s.unity - 50) * 0.3 - 65; // при высоком единстве горожане сами заделывают проломы
-  var naval = s.west * 0.8 + (f.chain ? 20 : 0) + (f.venFleet ? 15 : 0) + (f.loredanHarbor ? 10 : 0) + (f.cretans ? 8 : 0) - 62;
+  var bombard = s.walls * 0.8 + (f.urbanHired ? 15 : 0) - (f.urbanOttoman ? 15 : 0) + Math.max(0, s.unity - 50) * 0.3 + (f.wallGuns ? 5 : 0) - 65; // при высоком единстве горожане сами заделывают проломы
+  var naval = s.west * 0.8 + (f.chain ? 20 : 0) + (f.venFleet ? 15 : 0) + (f.loredanHarbor ? 10 : 0) + (f.cretans ? 8 : 0) + (f.fleetRefit ? 6 : 0) - 62;
   var mines = s.garrison / 100 + (f.grant ? (f.halfR ? 12 : 25) : 0) + (f.fewerMiners ? 8 : 0) - 82;
   var assault = s.garrison / 125 + s.unity * 0.3 + s.walls * 0.2 + s.west * 0.2 + (f.giustiniani ? (f.halfG ? 10 : 20) : 0) + (f.hosp ? 6 : 0) + (f.burgundians ? 5 : 0) + (f.orhanTurks ? 4 : 0) + (f.toledo ? 3 : 0) + (f.westMax ? 5 : 0) + (f.unityMax ? 5 : 0)
     - Math.max(s.threat, 50) * 0.8 - 110;
@@ -1265,7 +1449,7 @@ function siegeScore(s) {
 
 function beginSiege(s) {
   var f = s.flags;
-  if (s.morea >= 60) { f.moreaHelp = s.morea >= 100 ? 1000 : 500; s.garrison += f.moreaHelp; }
+  if (s.morea >= 60) { f.moreaHelp = (s.morea >= 100 ? 1000 : 500) + (f.albAllies ? 300 : 0); s.garrison += f.moreaHelp; }
   // Досрочная осада: опоздавшие союзники. Сон — оба (слабее), Реальность — один из двух, Кошмар — никто
   s.lateArrivals = [];
   if (f.earlySiege && s.diff !== 'nightmare') {
@@ -1360,7 +1544,7 @@ function epilogueOf(s) {
   var f = s.flags, c = s.counts || {}, w = s.west, u = s.unity;
   var unionSteps = (f.uJohn ? 1 : 0) + (f.uPope ? 1 : 0) + (f.unionProclaimed ? 1 : 0) + (f.uDialog ? 1 : 0) + (f.uPatriarch ? 1 : 0);
   if (unionSteps >= 3 && (c.embassy || 0) >= 2 && (c.union || 0) >= 2 && u >= 35) return 'union';
-  if (f.pl3 && s.morea >= 60) return 'hellenic';
+  if ((f.pl3 || f.argyro) && s.morea >= 60) return 'hellenic';
   if (w >= 60 && u < 40 && w - u >= 20) return 'catholic';
   if (u >= 60 && w < 45 && u - w >= 20) return 'orthodox';
   if (Math.abs(w - u) <= 15 && w >= 40 && u >= 40) return 'bridge';
@@ -1416,7 +1600,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  EPILOGUES: EPILOGUES, VERSION: '0.7.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  EPILOGUES: EPILOGUES, VERSION: '0.8.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -1542,7 +1726,27 @@ HALL = HALL.concat([
   { id: 'athens', group: 'Места', title: 'Герцогство Афинское', open: ['athens', 'varna'], re: 'Афин(ы|ам|ах|ский|ского|скому|ским|ское)',
     text: 'С 1388 года Афинами правил флорентийский род Аччайуоли, а Парфенон служил им собором. Герцоги лавировали между Мореей, Венецией и султаном. В 1456 году Мехмед взял Афины, а Парфенон стал мечетью.' },
   { id: 'epirus', group: 'Места', title: 'Эпир и Арта', open: ['epirus'], re: 'Эпир[а-я]*',
-    text: 'Горная область на западе Греции, в XIII веке — соперник Никеи в борьбе за наследство Константинополя. В XV веке ею правили итальянцы Токко, считавшие себя греческими деспотами. Арта пала в 1449 году, последние крепости — в 1479-м.' }
+    text: 'Горная область на западе Греции, в XIII веке — соперник Никеи в борьбе за наследство Константинополя. В XV веке ею правили итальянцы Токко, считавшие себя греческими деспотами. Арта пала в 1449 году, последние крепости — в 1479-м.' },
+  { id: 'theodore', group: 'Люди', title: 'Феодор II Палеолог', open: ['theodore', 'selymbria'], re: 'Феодор[а-я]*',
+    text: 'Брат Иоанна VIII и Константина, почти тридцать лет деспот Мореи. Человек учёный и мрачный, однажды он даже хотел постричься в монахи. В 1443 году обменял Морею на Селимврию у столицы, надеясь унаследовать трон, но умер от чумы в 1448 году.' },
+  { id: 'argyropoulos', group: 'Люди', title: 'Иоанн Аргиропул', open: ['argyropoulos'], re: 'Аргиропул[а-я]*',
+    text: 'Учёный и учитель философии, ездивший с Иоанном VIII на собор во Флоренцию. После падения Константинополя стал одним из самых знаменитых профессоров Италии: во Флоренции его лекции о Платоне и Аристотеле слушали Медичи.' },
+  { id: 'palamas', group: 'Люди', title: 'Григорий Палама и исихазм', open: ['hesychasm', 'athos'], re: '(Григори[йяюе]м? )?Палам[аыеу]',
+    text: 'Архиепископ Фессалоники XIV века, защитник исихастов — монахов-молчальников, учивших, что в молитве можно узреть нетварный свет. После долгих споров его учение признали православным, а самого Паламу — святым. Для противников унии он стал символом веры отцов.' },
+  { id: 'fruzhin', group: 'Люди', title: 'Царевич Фружин', open: ['fruzhin'], re: 'Фружин[а-я]*',
+    text: 'Сын последнего болгарского царя Ивана Шишмана. Всю жизнь провёл в борьбе с турками: поднимал восстания в Болгарии, служил венгерскому королю, воевал вместе с крестоносцами. Болгарию так и не освободил.' },
+  { id: 'albanians', group: 'Места', title: 'Албанцы Мореи', open: ['albanians1', 'albanians2', 'albanians3'], re: 'албанск[а-я]* клан[а-я]*',
+    text: 'С конца XIV века деспоты Мореи звали албанцев заселять опустевшие после войн и чумы земли. Албанцы стали лучшими воинами полуострова, но и самыми беспокойными подданными: в 1453–1454 годах они подняли большое восстание.' },
+  { id: 'selymbria', group: 'Места', title: 'Селимврия', open: ['theodore', 'selymbria'], re: 'Селимври[яиюей]',
+    text: 'Портовый город на Мраморном море, в двух днях пути к западу от столицы. Последний византийский город во Фракии, кроме самого Константинополя. Турки взяли его весной 1453 года, перед началом осады.' },
+  { id: 'pantokrator', group: 'Места', title: 'Монастырь Пантократора', open: ['pantokrator', 'union_procl'], re: 'Пантократор[а-я]*',
+    text: 'Огромный монастырь, основанный в XII веке императором Иоанном II Комнином: три храма, больница, усыпальница династии. В 1440-х годах — главный центр противников унии. Здание стоит до сих пор, сейчас это мечеть Зейрек.' },
+  { id: 'thasos', group: 'Места', title: 'Тасос', open: ['thasos'], re: 'Тасос[а-я]*',
+    text: 'Остров в северной Эгейде, в древности славный золотыми рудниками и мрамором. В XV веке им владели генуэзцы Гаттилузи, сеньоры Лесбоса. Османы забрали его в 1455 году.' },
+  { id: 'aqueduct', group: 'Места', title: 'Акведук Валента', open: ['aqueduct'], re: 'Акведук[а-я]* Валента',
+    text: 'Водопровод IV века, по которому вода с холмов Фракии шла в городские цистерны. Его арки до сих пор пересекают Стамбул. Город веками полагался на подземные цистерны — некоторые вмещали десятки тысяч кубометров.' },
+  { id: 'palace', group: 'Места', title: 'Большой дворец', open: ['palaces'], re: 'Большой дворец|Большого дворца',
+    text: 'Дворцовый город на берегу Мраморного моря, резиденция императоров с IV по XII век. После 1204 года пришёл в упадок, и Палеологи жили во Влахернах. От Большого дворца остались мозаики, которые и сегодня можно увидеть в Стамбуле.' }
 ]);
 // Как находить первое упоминание в тексте событий (регулярное выражение, учитываются падежи)
 var HALL_RE = {
@@ -1757,7 +1961,10 @@ var SCENE_OF = {
   census: 'letter', empty_sophia: 'church', brankovic: 'letter', minotto: 'sea', ships_flight: 'sea', halil: 'sultan', karaman: 'battle',
   alfonso: 'letter', manuscripts: 'letter', lomellino: 'sea', spies: 'walls',
   mark: 'church', gennadios_debate: 'church', patriarch: 'church', helena: 'court', mara: 'court', black_sea: 'sea', athens: 'morea',
-  epirus: 'battle', plethon2: 'letter', plethon3: 'morea', turahan: 'battle', citizens_walls: 'walls', volunteers: 'army', donations: 'gold',
+  epirus: 'battle', plethon2: 'letter', plethon3: 'morea', turahan: 'battle',
+  hosp_pirates: 'sea', theodore: 'court', selymbria: 'walls', pantokrator: 'church', palaces: 'court', aqueduct: 'walls', thieves: 'disaster',
+  pastures: 'morea', empty_quarters: 'walls', spolia: 'walls', argyropoulos: 'letter', hesychasm: 'church', heir: 'court', feud: 'court',
+  fleet: 'sea', fruzhin: 'battle', albanians1: 'morea', albanians2: 'army', albanians3: 'disaster', thasos: 'gold', coinage: 'gold', wall_cannons: 'cannon', citizens_walls: 'walls', volunteers: 'army', donations: 'gold',
   // экраны осады и концовок
   siege: 'cannon', fall: 'disaster', heroic: 'walls', repelled: 'church', alt: 'church', bankrupt: 'gold', revolt: 'disaster', early: 'sultan'
 };
@@ -1828,6 +2035,24 @@ SCENE_OF.bankrupt = 'emptyChest'; SCENE_OF.revolt = 'mob'; SCENE_OF.early = 'arm
 // hat: skiadion (высокая шляпа с полями, как у Иоанна VIII на медали Пизанелло), stemma (императорский венец),
 // turban, goathelm (шлем с козьими рогами Скандербега), sallet (шлем кондотьера), fur (меховая шапка),
 // cap (берет), hood (монашеский клобук), cardinal (кардинальская шляпа), tall (высокая шапка архонта)
+function moodFace(m, skin, hl, d) {
+  m = m || 'calm';
+  var B = { calm: ['M45 47 Q51 44 57 46.5', 'M63 46.5 Q69 44 75 47'], stern: ['M45 46 Q51 46.5 57.5 49', 'M62.5 49 Q69 46.5 75 46'],
+    weary: ['M45 49 Q51 45.5 57 45.5', 'M63 45.5 Q69 45.5 75 49'], proud: ['M45 46.5 Q51 42 57 45', 'M63 45 Q69 42 75 46.5'],
+    kind: ['M45 47.5 Q51 45 57 46', 'M63 46 Q69 45 75 47.5'], fierce: ['M44.5 45 Q51 47 58 50.8', 'M62 50.8 Q69 47 75.5 45'] }[m];
+  var lid = { calm: .35, stern: .5, weary: .62, proud: .55, kind: .3, fierce: 0 }[m];
+  var out = '<path d="' + B[0] + ' M' + B[1].slice(1) + '" stroke="' + hl + '" stroke-width="2.3" fill="none" stroke-linecap="round"/>';
+  [51.5, 68.5].forEach(function (x) {
+    out += '<ellipse cx="' + x + '" cy="53" rx="3.6" ry="2.3" fill="#f2e8d8"/><circle cx="' + (x + .5) + '" cy="53.3" r="1.6" fill="' + d + '"/>';
+    var lb = 50.7 + lid * 4.6;
+    if (lid > 0) out += '<ellipse cx="' + x + '" cy="' + (lb - 2.8) + '" rx="4.1" ry="2.8" fill="' + skin + '"/>';
+    out += '<path d="M' + (x - 3.8) + ' ' + lb + ' Q' + x + ' ' + (lb - 1.2) + ' ' + (x + 3.8) + ' ' + lb + '" stroke="' + d + '" stroke-width=".9" fill="none" opacity=".7"/>';
+    if (m === 'kind') out += '<ellipse cx="' + x + '" cy="57.4" rx="4.1" ry="2.6" fill="' + skin + '"/><path d="M' + (x - 3.4) + ' 54.9 Q' + x + ' 56 ' + (x + 3.4) + ' 54.9" stroke="' + d + '" stroke-width=".6" fill="none" opacity=".5"/>';
+    if (m === 'weary') out += '<path d="M' + (x - 3) + ' 57 Q' + x + ' 58.4 ' + (x + 3) + ' 57" stroke="#8a5a3a" stroke-width=".8" fill="none" opacity=".6"/>';
+  });
+  if (m === 'stern' || m === 'fierce') out += '<path d="M58.6 46 v3 M61.4 46 v3" stroke="#8a5a3a" stroke-width=".7" opacity=".6"/>';
+  return out;
+}
 function portrait(o, size) {
   var skin = o.skin || '#c99a6e', shade = '#9c6e48', hair = o.grey ? '#c9c1b6' : (o.hair || '#3a2a20'), hairLine = o.grey ? '#9a9288' : '#1e140e';
   var robe = o.robe || '#5e2276', g = SC.gold, d = SC.dark;
@@ -1848,20 +2073,17 @@ function portrait(o, size) {
     '<ellipse cx="60" cy="56" rx="21" ry="26" fill="' + skin + '"/>' +
     '<path d="M64 31 Q84 42 80 66 Q76 80 62 82 Q76 64 64 31 Z" fill="#000" opacity=".13"/>' +
     '<circle cx="49" cy="64" r="4" fill="#d07a62" opacity=".18"/><circle cx="71" cy="64" r="4" fill="#d07a62" opacity=".14"/>' +
-    '<path d="M45 47 Q51 43.5 57 46.5 M63 46.5 Q69 43.5 75 47" stroke="' + hairLine + '" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
-    '<ellipse cx="51.5" cy="53" rx="3.6" ry="2.2" fill="#f2e8d8"/><ellipse cx="68.5" cy="53" rx="3.6" ry="2.2" fill="#f2e8d8"/>' +
-    '<circle cx="52" cy="53" r="1.6" fill="' + d + '"/><circle cx="69" cy="53" r="1.6" fill="' + d + '"/>' +
-    '<path d="M47.5 51 Q51.5 49.5 55.5 51 M64.5 51 Q68.5 49.5 72.5 51" stroke="' + d + '" stroke-width=".8" fill="none" opacity=".6"/>' +
+    moodFace(o.mood, skin, hairLine, d) +
     '<path d="M60 52 Q59 61 56.5 65 Q59.5 67.5 63.5 65.5" stroke="' + shade + '" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
-  var mouth = '<path d="M54.5 72.5 Q60 74.5 65.5 72.5" stroke="#7a4434" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+  var mouth = '<path d="' + ({ calm: 'M54.5 72.5 Q60 74 65.5 72.5', stern: 'M54.5 73 L65.5 73', weary: 'M54.5 74.2 Q60 72 65.5 74.2', proud: 'M54.5 72.8 Q60 73.6 66 71.4', kind: 'M54 71.8 Q60 76 66 71.8', fierce: 'M54.5 74.8 Q60 71.4 65.5 74.8' }[o.mood] || 'M54.5 72.5 Q60 74 65.5 72.5') + '" stroke="#6a3428" stroke-width="1.7" fill="none" stroke-linecap="round"/>';
   var strands = function (x1, x2, y1, y2) { return rep(5, function (i) { var x = x1 + (x2 - x1) * (i + .5) / 5; return '<path d="M' + x + ' ' + y1 + ' Q' + (x + (i - 2) * 1.5) + ' ' + ((y1 + y2) / 2) + ' ' + (x + (i - 2) * 2) + ' ' + y2 + '" stroke="' + hairLine + '" stroke-width=".9" fill="none" opacity=".6"/>'; }); };
   var beard = {
     long: '<path d="M38 60 Q36 102 60 116 Q84 102 82 60 Q76 78 66 79 Q60 76 54 79 Q44 78 38 60 Z" fill="' + hair + '"/>' + strands(44, 76, 82, 110) + '<path d="M51 74 Q60 70 69 74" stroke="' + hairLine + '" stroke-width="2" fill="none"/>',
     pointed: '<path d="M41 64 Q46 96 60 104 Q74 96 79 64 Q72 79 66 79 Q60 76 54 79 Q48 79 41 64 Z" fill="' + hair + '"/>' + strands(48, 72, 82, 100) + '<path d="M51 74 Q60 70 69 74" stroke="' + hairLine + '" stroke-width="2" fill="none"/>',
-    short: mouth + '<path d="M41 64 Q45 88 60 91 Q75 88 79 64 Q73 78 66 79 Q60 76.5 54 79 Q47 78 41 64 Z" fill="' + hair + '"/>' + strands(47, 73, 81, 89) + '<path d="M51 74 Q60 70.5 69 74" stroke="' + hairLine + '" stroke-width="2" fill="none"/>',
-    mustache: mouth + '<path d="M45 73 Q52 67 60 71 Q68 67 75 73 Q68 75 60 73.5 Q52 75 45 73 Z" fill="' + hair + '"/>',
-    none: mouth
-  }[o.beard || 'short'];
+    short: '<path d="M41 64 Q45 88 60 91 Q75 88 79 64 Q73 78 66 79 Q60 76.5 54 79 Q47 78 41 64 Z" fill="' + hair + '"/>' + strands(47, 73, 81, 89) + '<path d="M51 74 Q60 70.5 69 74" stroke="' + hairLine + '" stroke-width="2" fill="none"/>',
+    mustache: '<path d="M45 73 Q52 67 60 71 Q68 67 75 73 Q68 75 60 73.5 Q52 75 45 73 Z" fill="' + hair + '"/>',
+    none: ''
+  }[o.beard || 'short'] + mouth;
   var sideHair = (o.hat === 'hood' || o.hat === 'turban' || o.hat === 'veil' || o.hat === 'diadem') ? '' : '<path d="M39 46 Q37 62 40 70 L43 70 Q41 58 43 46 Z M81 46 Q83 62 80 70 L77 70 Q79 58 77 46 Z" fill="' + hair + '"/>';
   var hats = {
     skiadion: '<path d="M14 40 Q60 28 106 40 Q100 47 60 45 Q20 47 14 40 Z" fill="' + g + '" stroke="' + d + '" stroke-width=".8"/>' +
@@ -1912,38 +2134,42 @@ function portrait(o, size) {
     '<rect x="1" y="1" width="118" height="138" rx="10" fill="none" stroke="' + g + '" stroke-width="2" opacity=".85"/></svg>';
 }
 var PORTRAITS = {
-  john8:      { hat: 'skiadion', beard: 'pointed', robe: '#5e2276', halo: true, loros: true },
-  const11:    { hat: 'stemma', beard: 'short', robe: '#6d2a86', halo: true, loros: true },
-  murad2:     { hat: 'turban', beard: 'long', grey: true, robe: '#2f5a3a' },
-  mehmed2:    { hat: 'turban', beard: 'pointed', robe: '#8a2a2a' },
-  hunyadi:    { hat: 'fur', beard: 'mustache', robe: '#3a4a6a' },
-  skanderbeg: { hat: 'goathelm', beard: 'long', grey: true, robe: '#6a1a1a' },
-  orhan:      { hat: 'turban', beard: 'short', robe: '#3a2a5a' },
-  urban:      { hat: 'cap', beard: 'long', robe: '#5a4030', capColor: '#4a3a2a' },
-  giustiniani:{ hat: 'sallet', beard: 'short', robe: '#5a5f66' },
-  grant:      { hat: 'cap', beard: 'short', robe: '#3a5a3a', capColor: '#2a4a2a' },
-  notaras:    { hat: 'tall', beard: 'long', robe: '#2a3a5a', capColor: '#5e2276' },
-  scholarius: { hat: 'hood', beard: 'long', grey: true, robe: '#141018' },
-  bessarion:  { hat: 'cardinal', beard: 'long', grey: true, robe: '#a32020' },
-  plethon:    { hat: 'tall', beard: 'long', grey: true, robe: '#3a3a3a', capColor: '#3a2a20' },
-  mark:       { hat: 'hood', beard: 'long', grey: true, robe: '#141018' },
-  helena:     { hat: 'veil', beard: 'none', robe: '#18121e', skin: '#c49a78' },
-  mara:       { hat: 'diadem', beard: 'none', robe: '#3a2a5a', veilColor: '#4a2a6a' },
-  halil:      { hat: 'turban', beard: 'long', grey: true, robe: '#1f3a2a' },
-  sphrantzes: { hat: 'tall', beard: 'short', robe: '#5a4030', capColor: '#4a3a2a' },
-  theophilos: { hat: 'none', beard: 'short', robe: '#2a4a6a' },
-  kantakouzenos: { hat: 'tall', beard: 'pointed', robe: '#6a2a2a', capColor: '#8a2a2a' },
-  demetrios:  { hat: 'stemma', beard: 'pointed', robe: '#7a2a2a' },
-  mammas:     { hat: 'hood', beard: 'long', grey: true, robe: '#1a1420' },
-  thoisy:     { hat: 'cap', beard: 'mustache', robe: '#4a4a52', capColor: '#1e1e24' },
-  philip:     { hat: 'cap', beard: 'none', robe: '#1e1e24', capColor: '#141414' },
-  loredan:    { hat: 'cap', beard: 'short', grey: true, robe: '#7a1a1a', capColor: '#9a1a1a' },
-  minotto:    { hat: 'cap', beard: 'long', robe: '#5a1a2a', capColor: '#7a1a2a' },
-  turahan:    { hat: 'turban', beard: 'long', grey: true, robe: '#5a4020' },
-  alfonso:    { hat: 'crown', beard: 'none', robe: '#7a5a1a' },
-  toledo:     { hat: 'sallet', beard: 'pointed', robe: '#5a3a1a' }
+  john8:      { mood: 'weary', hat: 'skiadion', beard: 'pointed', robe: '#5e2276', halo: true, loros: true },
+  const11:    { mood: 'stern', hat: 'stemma', beard: 'short', robe: '#6d2a86', halo: true, loros: true },
+  murad2:     { mood: 'weary', hat: 'turban', beard: 'long', grey: true, robe: '#2f5a3a' },
+  mehmed2:    { mood: 'proud', hat: 'turban', beard: 'pointed', robe: '#8a2a2a' },
+  hunyadi:    { mood: 'stern', hat: 'fur', beard: 'mustache', robe: '#3a4a6a' },
+  skanderbeg: { mood: 'fierce', hat: 'goathelm', beard: 'long', grey: true, robe: '#6a1a1a' },
+  orhan:      { mood: 'calm', hat: 'turban', beard: 'short', robe: '#3a2a5a' },
+  urban:      { mood: 'proud', hat: 'cap', beard: 'long', robe: '#5a4030', capColor: '#4a3a2a' },
+  giustiniani:{ mood: 'stern', hat: 'sallet', beard: 'short', robe: '#5a5f66' },
+  grant:      { mood: 'calm', hat: 'cap', beard: 'short', robe: '#3a5a3a', capColor: '#2a4a2a' },
+  notaras:    { mood: 'proud', hat: 'tall', beard: 'long', robe: '#2a3a5a', capColor: '#5e2276' },
+  scholarius: { mood: 'stern', hat: 'hood', beard: 'long', grey: true, robe: '#141018' },
+  bessarion:  { mood: 'kind', hat: 'cardinal', beard: 'long', grey: true, robe: '#a32020' },
+  plethon:    { mood: 'calm', hat: 'tall', beard: 'long', grey: true, robe: '#3a3a3a', capColor: '#3a2a20' },
+  mark:       { mood: 'stern', hat: 'hood', beard: 'long', grey: true, robe: '#141018' },
+  helena:     { mood: 'kind', hat: 'veil', beard: 'none', robe: '#18121e', skin: '#c49a78' },
+  mara:       { mood: 'calm', hat: 'diadem', beard: 'none', robe: '#3a2a5a', veilColor: '#4a2a6a' },
+  halil:      { mood: 'weary', hat: 'turban', beard: 'long', grey: true, robe: '#1f3a2a' },
+  sphrantzes: { mood: 'kind', hat: 'tall', beard: 'short', robe: '#5a4030', capColor: '#4a3a2a' },
+  theophilos: { mood: 'calm', hat: 'none', beard: 'short', robe: '#2a4a6a' },
+  kantakouzenos: { mood: 'proud', hat: 'tall', beard: 'pointed', robe: '#6a2a2a', capColor: '#8a2a2a' },
+  demetrios:  { mood: 'proud', hat: 'stemma', beard: 'pointed', robe: '#7a2a2a' },
+  mammas:     { mood: 'weary', hat: 'hood', beard: 'long', grey: true, robe: '#1a1420' },
+  thoisy:     { mood: 'fierce', hat: 'cap', beard: 'mustache', robe: '#4a4a52', capColor: '#1e1e24' },
+  philip:     { mood: 'proud', hat: 'cap', beard: 'none', robe: '#1e1e24', capColor: '#141414' },
+  loredan:    { mood: 'stern', hat: 'cap', beard: 'short', grey: true, robe: '#7a1a1a', capColor: '#9a1a1a' },
+  minotto:    { mood: 'calm', hat: 'cap', beard: 'long', robe: '#5a1a2a', capColor: '#7a1a2a' },
+  turahan:    { mood: 'fierce', hat: 'turban', beard: 'long', grey: true, robe: '#5a4020' },
+  alfonso:    { mood: 'proud', hat: 'crown', beard: 'none', robe: '#7a5a1a' },
+  toledo:     { mood: 'kind', hat: 'sallet', beard: 'pointed', robe: '#5a3a1a' },
+  theodore:   { mood: 'weary', hat: 'stemma', beard: 'long', robe: '#4a2a5a' },
+  argyropoulos: { mood: 'calm', hat: 'cap', beard: 'short', robe: '#2a3a5a', capColor: '#1e2a40' },
+  palamas:    { mood: 'kind', hat: 'hood', beard: 'long', robe: '#141018' },
+  fruzhin:    { mood: 'fierce', hat: 'fur', beard: 'short', robe: '#2a4a2a' }
 };
-var HALL_SCENE = { walls: 'walls', horn: 'sea', morea: 'morea', galata: 'sea', rumeli: 'walls', union: 'church', varna: 'battle', siege: 'cannon', trebizond: 'sea', blacksea: 'sea', athens: 'morea', epirus: 'battle' };
+var HALL_SCENE = { walls: 'walls', horn: 'sea', morea: 'morea', galata: 'sea', rumeli: 'walls', union: 'church', varna: 'battle', siege: 'cannon', trebizond: 'sea', blacksea: 'sea', athens: 'morea', epirus: 'battle', albanians: 'morea', selymbria: 'walls', pantokrator: 'church', thasos: 'gold', aqueduct: 'walls', palace: 'court' };
 
 // ---------- Подсказки к ресурсам ----------
 var TIPS = {
@@ -2172,7 +2398,9 @@ function eventModal() {
   var h = '<div class="overlay"><div class="modal">' +
     '<div class="kicker">' + (ev.kicker ? '📜 Историческое событие · ' + ev.kicker : (ev.from !== undefined ? '📜 Историческое событие · ' : '⚜ Событие · ') + G.dateOf(s)) + '</div>' +
     '<h2>' + ev.title + '</h2>' + sceneSVG(ev.id) + (function () { var done = {}, t = loreLinks(G.evText(ev, s), done);
-      return '<p>' + t + '</p>' + (ev.note ? '<div class="note">' + loreLinks(ev.note, done) + '</div>' : ''); })() + '<div class="opts">';
+      return '<p>' + t + '</p>' + (ev.note ? '<div class="note">' + loreLinks(ev.note, done) + '</div>' : ''); })() +
+    '<div class="mini">' + ['gold', 'walls', 'garrison', 'west', 'unity', 'threat', 'morea'].map(function (k) { return '<span title="' + G.STATS[k].name + '">' + G.STATS[k].icon + ' ' + s[k] + '</span>'; }).join('') + '</div>' +
+    '<div class="opts">';
   opts.forEach(function (o, i) {
     var ok = G.optionAvailable(s, o);
     h += '<button class="opt" data-opt="' + i + '" ' + (ok ? '' : 'disabled') + '><span class="t">' + o.text + '</span>' +
@@ -2365,13 +2593,13 @@ function renderPopup() {
       block('СОЮЗНИКИ И БОНУСЫ', G.ALLY_EVENTS, function (e) { return 'Условие: ' + (G.WHEN[e.id] || '—'); }) +
       block('СЛУЧАЙНЫЕ', G.RANDOM, function (e) { return 'Условие: ' + (G.WHEN[e.id] || 'в любое время') + ' · вес ' + e.w + ' (чем больше, тем чаще выпадает среди доступных)'; });
     var formula = '<div class="lh" style="margin-top:14px"><span>ФОРМУЛА ОСАДЫ</span></div><div class="stage" style="font-size:13.5px">' +
-      '<p><b>Обстрел</b> = стены × 0,8 + 15 (Урбан у вас) − 15 (Урбан у султана) + (единство − 50) × 0,3, если единство выше 50 − 65</p>' +
-      '<p><b>Золотой Рог</b> = Запад × 0,8 + 20 (цепь) + 15 (венецианские галеры) + 10 (Лоредан охраняет гавань) + 8 (критяне) − 62</p>' +
+      '<p><b>Обстрел</b> = стены × 0,8 + 15 (Урбан у вас) − 15 (Урбан у султана) + (единство − 50) × 0,3, если единство выше 50 + 5 (пушки на стенах) − 65</p>' +
+      '<p><b>Золотой Рог</b> = Запад × 0,8 + 20 (цепь) + 15 (венецианские галеры) + 10 (Лоредан охраняет гавань) + 8 (критяне) + 6 (снаряжённые галеры) − 62</p>' +
       '<p><b>Подкопы</b> = гарнизон ÷ 100 + 25 (Грант; 12, если опоздал) + 8 (Бранкович тянет время) − 82</p>' +
       '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (иоанниты) + 5 (бургундцы) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 50) − 110</p>' +
       '<p>К каждому этапу добавляется случайность: ±15, у штурма ±20. Этап удался, если вышло 0 или больше. Каждый удачный этап из первых трёх даёт штурму +6.</p>' +
       '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +10 (поправка на округление указов).</p>' +
-      '<p>Перед осадой Морея 60+ присылает 500 воинов, Морея 100 — 1000.</p></div>';
+      '<p>Перед осадой Морея 60+ присылает 500 воинов, Морея 100 — 1000; албанские стратиоты добавляют 300.</p></div>';
     return '<div class="overlay"><div class="modal"><div class="kicker">⚙ Только для автора</div><h2>📋 Справочник</h2>' +
       '<p style="font-size:13.5px;color:var(--muted)">Всего событий: ' + (G.HIST.length + G.ALLY_EVENTS.length + G.RANDOM.length) +
       '. Случайные события не приходят в первый ход; дальше случайное событие выпадает, если в ходу меньше двух событий; из доступных выбирается по весу. Эффекты показаны для нынешнего положения дел. В «Сказании» указы делятся на два хода, события — нет. За ход — не больше двух событий, кроме сюжетных, которые не могут ждать.</p>' +
@@ -2390,6 +2618,7 @@ function renderPopup() {
       '<p><b style="color:var(--gold2);font-weight:normal">«Последние годы Константинополя»</b> — пошаговая историческая стратегия.</p>' +
       '<p>© 2026 Craiden_x. Все права защищены.<br>Идея, геймдизайн и историческая редактура — Craiden_x.<br>Код, тексты и иллюстрации созданы при участии Claude (Anthropic).</p>' +
       '<div class="lh" style="margin-top:12px"><span>ЧТО НОВОГО</span></div><ul>' +
+      '<li><b>0.8.0</b> — мимика портретов, ресурсы видны в окне события, 23 события (жизнь города, Селимврия, албанцы, Аргиропул, наследник), 10 статей в зале.</li>' +
       '<li><b>0.7.0</b> — 20 новых статей и портретов в зале, подсветка имён в событиях с подсказкой, единство помогает при обстреле, 3 события для единства.</li>' +
       '<li><b>0.6.0</b> — портреты в зале, судьба империи после победы (5 эпилогов), 11 событий, видно «было → стало» после решения, версия игры.</li>' +
       '<li><b>0.5.0</b> — картинки событий и концовок, ★ новых статей, цепочка де Туази, бургундцы, 11 событий.</li>' +
