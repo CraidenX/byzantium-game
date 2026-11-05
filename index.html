@@ -254,15 +254,18 @@ var LAST_TURN = 18; // в «Хронографе» ход 18 = январь–м
 // Темп: в «Хронографе» ход — полгода, в «Сказании» — сезон (вдвое больше ходов, всё за ход вдвое меньше)
 var SPEEDS = {
   half:   { name: 'Хронограф', per: 1, desc: 'Ход — полгода, 19 ходов. Рекомендуется.' },
-  season: { name: 'Сказание',  per: 2, desc: 'Ход — сезон, 37 ходов. Больше решений, каждое весит вдвое меньше.' }
+  season: { name: 'Сказание',  per: 2, desc: 'Ход — сезон, 37 ходов. Больше решений, каждое весит вдвое меньше.' },
+  chronicle: { name: 'Летопись', per: 3, desc: 'Ход — два месяца, 55 ходов. Для неторопливой игры: каждое решение весит втрое меньше.' }
 };
-function P(s) { return (s && s.speed === 'season') ? 2 : 1; }
+function P(s) { return !s ? 1 : s.speed === 'season' ? 2 : s.speed === 'chronicle' ? 3 : 1; }
+var SPEED_BONUS = { 1: 0, 2: 10, 3: 14 }; // поправка к итогу осады на округление указов в медленных темпах
 function lastTurn(s) { return LAST_TURN * P(s); }
 function H(s) { return Math.floor(s.t / P(s)); } // номер полугодия — по нему считаются даты событий
 // Делим «полугодовую» величину на ходы: в «Сказании» за два сезона в сумме выходит ровно столько же
 function per(s, x) {
-  if (P(s) === 1 || !x) return x;
-  var a = Math.abs(x), v = Math.floor(a / 2) + ((a % 2) && (s.t % 2) ? 1 : 0);
+  var p = P(s);
+  if (p === 1 || !x) return x;
+  var a = Math.abs(x), v = Math.floor(a / p) + ((s.t % p) < (a % p) ? 1 : 0);
   return x < 0 ? -v : v;
 }
 
@@ -324,7 +327,9 @@ function describeEff(eff) {
 }
 
 var QUARTERS = ['январь — март ', 'апрель — июнь ', 'июль — сентябрь ', 'октябрь — декабрь '];
+var BIMONTHS = ['январь — февраль ', 'март — апрель ', 'май — июнь ', 'июль — август ', 'сентябрь — октябрь ', 'ноябрь — декабрь '];
 function dateLabel(t, speed) {
+  if (speed === 'chronicle') return t >= LAST_TURN * 3 ? 'январь — февраль 1453' : BIMONTHS[t % 6] + (1444 + Math.floor(t / 6));
   if (speed === 'season') return t >= LAST_TURN * 2 ? 'январь — март 1453' : QUARTERS[t % 4] + (1444 + Math.floor(t / 4));
   var year = 1444 + Math.floor(t / 2);
   if (t >= LAST_TURN) return 'январь — март 1453';
@@ -1528,11 +1533,11 @@ function startTurn(s) {
   var r = rngFor(s, s.t * 100 + 1);
   s.queue = [];
   // 1) события с точной датой
-  var half = H(s), late = P(s) === 1 || s.t % 2 === 1 || s.t >= lastTurn(s);
+  var half = H(s), late = P(s) === 1 || s.t % P(s) === P(s) - 1 || s.t >= lastTurn(s);
   HIST.forEach(function (e) {
     if (e.turn !== half) return;
-    var q = e.q === undefined ? 1 : e.q;          // в «Сказании»: 0 — первый сезон полугодия, 1 — второй
-    if (P(s) === 1 || s.t % 2 === q) s.queue.push(e.id);
+    var q = e.q === undefined ? 1 : e.q;          // 0 — начало полугодия, 1 — его конец
+    if (P(s) === 1 || s.t % P(s) === (q === 0 ? 0 : P(s) - 1)) s.queue.push(e.id);
   });
   // 2) союзники за помощь Запада и единство 75 и 100 (приходят обязательно)
   [['west', 'w'], ['unity', 'u']].forEach(function (pair) {
@@ -1559,7 +1564,7 @@ function startTurn(s) {
     if (forced || (s.queue.length < MAX_EVENTS && roll < e.p / P(s))) { s.queue.push(e.id); s.used[e.id] = true; }
   });
   // 4) случайное событие, если есть место (в первый ход — нет)
-  if (s.t > 0 && s.queue.length < MAX_EVENTS && (P(s) === 1 || r() < 0.5)) {
+  if (s.t > 0 && s.queue.length < MAX_EVENTS && (P(s) === 1 || r() < 1 / P(s))) {
     var ev = pickRandomEvent(s, r);
     if (ev) { s.queue.push(ev.id); s.used[ev.id] = true; }
   }
@@ -1689,7 +1694,7 @@ function beginSiege(s) {
   var okCount = (m1 >= 0) + (m2 >= 0) + (m3 >= 0);
   var m4 = base.assault + okCount * 6 + r(20);
   var total = Math.round(m1 * 0.5 + m2 * 0.4 + m3 * 0.4 + m4 * 1.2);
-  total += D(s).siege + (P(s) === 2 ? 10 : 0) + (f.couriers ? 3 : 0); // «Сказание»: поправка на округление указов
+  total += D(s).siege + SPEED_BONUS[P(s)] + (f.couriers ? 3 : 0); // «Сказание»: поправка на округление указов
   if (f.earlySiege) total -= 10 + Math.round((lastTurn(s) - s.t) * 10 / P(s)); // досрочная осада: город не готов
   var ending;
   if (total < 0 && f.earlySiege) ending = 'early';
@@ -1727,7 +1732,7 @@ function beginSiege(s) {
 function omen(s) {
   var m = siegeScore(s);
   var ok = (m.bombard >= 0) + (m.naval >= 0) + (m.mines >= 0);
-  var total = m.bombard * 0.5 + m.naval * 0.4 + m.mines * 0.4 + (m.assault + ok * 6) * 1.2 + D(s).siege + (P(s) === 2 ? 10 : 0);
+  var total = m.bombard * 0.5 + m.naval * 0.4 + m.mines * 0.4 + (m.assault + ok * 6) * 1.2 + D(s).siege + SPEED_BONUS[P(s)];
   function lvl(x) { return x >= 10 ? 'крепко' : x >= -10 ? 'шатко' : 'слабо'; }
   var verdict =
     total >= 25 ? 'Чаша весов уверенно клонится к вам. Город может не только выстоять, но и перевернуть историю.' :
@@ -1852,7 +1857,7 @@ root.Game = {
   armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '0.9.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
-  SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
+  SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
   eventById: eventById, ALLY_EVENTS: ALLY_EVENTS, startTurn: startTurn, WHEN: WHEN,
   newGame: newGame, dateLabel: dateLabel, yearOf: yearOf, income: income, upkeep: upkeep, threatGrowth: threatGrowth,
   describeEff: describeEff, applyEff: applyEff, currentEvent: currentEvent, evText: evText, optionAvailable: optionAvailable,
@@ -1980,6 +1985,26 @@ HALL = HALL.concat([
     text: 'Герой болгарских преданий: воевода, будто бы долго удерживавший горы у Ловеча и громивший турецкие отряды. Насколько эти рассказы правдивы, историки спорят — но для болгар он стал символом сопротивления.' },
   { id: 'hodegetria', group: 'События', title: 'Икона Одигитрии', open: ['procession'], re: 'Одигитри[яиюей]',
     text: 'Главная святыня Константинополя — икона Богоматери «Путеводительницы», по преданию написанная евангелистом Лукой. Её носили по стенам во время осад. В 1453 году турки, ворвавшись в город, разрубили икону на части.' },
+  { id: 'zaganos', group: 'Люди', title: 'Заганос-паша', open: ['zaganos', 'mehmed_child'], re: 'Заганос[а-я]*',
+    text: 'Второй визирь Мехмеда II, по происхождению христианин, взятый в янычары мальчиком. Вождь «партии войны»: убеждал юного султана, что Константинополь падёт. В 1453 году командовал войсками у Золотого Рога, а после казни Халила стал великим визирем.' },
+  { id: 'vlad2', group: 'Люди', title: 'Влад II Дракул', open: ['vlad_dracul'], re: 'Влад[а-я]* Дракул[а-я]*',
+    text: 'Господарь Валахии, рыцарь венгерского ордена Дракона — отсюда прозвище «Дракул». Лавировал между венграми и султаном, отдав туркам в заложники сыновей Влада и Раду. Убит в 1447 году. Его сын Влад III вошёл в историю как Цепеш, а в легендах — как граф Дракула.' },
+  { id: 'isidore', group: 'Люди', title: 'Исидор Киевский', open: ['isidore_flight', 'union_procl'], re: 'Исидор[а-я]*',
+    text: 'Грек, митрополит Киевский и всея Руси, один из главных сторонников унии во Флоренции. В Москве его объявили еретиком и посадили под стражу, но он бежал и стал кардиналом. В 1452 году привёз в Константинополь двести лучников и провозгласил унию в Святой Софии. Пережил падение города, бежав в чужом платье.' },
+  { id: 'thomas', group: 'Люди', title: 'Фома Палеолог', open: ['thomas', 'morea_quarrel', 'selymbria'], re: 'Фом(?:а|ы|е|у|ой)',
+    text: 'Самый младший из братьев Константина, деспот Мореи. В отличие от Димитрия, искал поддержки у папы и Венеции. В 1460 году бежал в Рим, увезя главу апостола Андрея. Его дочь Зоя под именем Софья стала женой Ивана III; принято считать, что через неё в Москву пришёл двуглавый орёл.' },
+  { id: 'helena_cy', group: 'Люди', title: 'Елена Палеологиня', open: ['cyprus'], re: 'Елен[аыеу] Палеологин[яиюей]',
+    text: 'Дочь деспота Феодора, королева Кипра и жена Иоанна II Лузиньяна. Фактически правила островом за слабого мужа, покровительствовала грекам и православной церкви, чем приводила в ярость латинскую знать. После падения Константинополя принимала на Кипре беженцев. Умерла в 1458 году.' },
+  { id: 'moscow', group: 'Места', title: 'Москва', open: ['moscow', 'isidore_flight'], re: 'Москв(?:а|ы|е|у|ой)',
+    text: 'Великое княжество Московское отвергло Флорентийскую унию и в 1448 году само поставило себе митрополита. После падения Константинополя в Москве родилась идея «Третьего Рима»: Второй пал, Третий стоит, а четвёртому не бывать.' },
+  { id: 'caffa', group: 'Места', title: 'Каффа', open: ['caffa'], re: 'Кафф(?:а|ы|е|у|ой)',
+    text: 'Генуэзская колония в Крыму, нынешняя Феодосия. Через неё шли зерно, рыба и рабы с северного берега Чёрного моря. Отсюда, по одной из версий, в 1347 году началась по Европе «Чёрная смерть». Турки взяли Каффу в 1475 году.' },
+  { id: 'ragusa', group: 'Места', title: 'Рагуза', open: ['ragusa'], re: 'Рагуз(?:а|ы|е|у|ой)',
+    text: 'Вольный город-республика на Адриатике, нынешний Дубровник. Без армии и большого флота Рагуза веками выживала торговлей и дипломатией, платя дань то Венгрии, то султану, и оставалась независимой до прихода Наполеона.' },
+  { id: 'monemvasia', group: 'Места', title: 'Монемвасия', open: ['monemvasia'], re: 'Монемваси(?:я|и|ю|ей)',
+    text: 'Город-крепость на скале у восточного берега Мореи, соединённый с сушей узкой дамбой — отсюда имя: «единственный вход». Богател на вине, которое на Западе звали «мальвазией». После падения Мореи отдался под власть папы, затем Венеции.' },
+  { id: 'hippodrome', group: 'Места', title: 'Ипподром', open: ['hippodrome', 'spolia'], re: '[Ии]пподром[а-я]*',
+    text: 'Огромная арена для скачек колесниц, сердце городской жизни ранней империи: здесь болели за «синих» и «зелёных», здесь в 532 году вспыхнуло восстание Ника. К XV веку ипподром зарос травой, а на его месте порой устраивали рыцарские турниры.' },
   { id: 'theodore', group: 'Люди', title: 'Феодор II Палеолог', open: ['theodore', 'selymbria'], re: 'Феодор[а-я]*',
     text: 'Брат Иоанна VIII и Константина, почти тридцать лет деспот Мореи. Человек учёный и мрачный, однажды он даже хотел постричься в монахи. В 1443 году обменял Морею на Селимврию у столицы, надеясь унаследовать трон, но умер от чумы в 1448 году.' },
   { id: 'argyropoulos', group: 'Люди', title: 'Иоанн Аргиропул', open: ['argyropoulos'], re: 'Аргиропул[а-я]*',
@@ -2630,9 +2655,14 @@ var PORTRAITS = {
   argyropoulos: { mood: 'calm', hat: 'cap', beard: 'short', robe: '#2a3a5a', capColor: '#1e2a40' },
   palamas:    { mood: 'kind', hat: 'hood', beard: 'long', robe: '#141018' },
   fruzhin:    { mood: 'fierce', hat: 'fur', beard: 'short', robe: '#2a4a2a' },
-  stanko:     { mood: 'fierce', hat: 'fur', beard: 'mustache', robe: '#4a3a2a' }
+  stanko:     { mood: 'fierce', hat: 'fur', beard: 'mustache', robe: '#4a3a2a' },
+  zaganos:    { mood: 'fierce', hat: 'turban', beard: 'short', robe: '#3a2a1a' },
+  vlad2:      { mood: 'stern', hat: 'fur', beard: 'mustache', robe: '#6a1a2a' },
+  isidore:    { mood: 'weary', hat: 'cardinal', beard: 'long', grey: true, robe: '#a32020' },
+  thomas:     { mood: 'calm', hat: 'stemma', beard: 'pointed', robe: '#2a4a6a' },
+  helena_cy:  { mood: 'calm', hat: 'diadem', beard: 'none', robe: '#7a1a2a', veilColor: '#8a2a3a' }
 };
-var HALL_SCENE = { walls: 'walls', horn: 'harbor', morea: 'morea', galata: 'harbor', rumeli: 'fortress', union: 'church', varna: 'battle', siege: 'cannon', trebizond: 'harbor', blacksea: 'sea', athens: 'acropolis', epirus: 'battle', albanians: 'morea', selymbria: 'walls', pantokrator: 'monastery', thasos: 'mine', aqueduct: 'city', palace: 'ruins', hodegetria: 'procession' };
+var HALL_SCENE = { walls: 'walls', horn: 'harbor', morea: 'morea', galata: 'harbor', rumeli: 'fortress', union: 'church', varna: 'battle', siege: 'cannon', trebizond: 'harbor', blacksea: 'sea', athens: 'acropolis', epirus: 'battle', albanians: 'morea', selymbria: 'walls', pantokrator: 'monastery', thasos: 'mine', aqueduct: 'city', palace: 'ruins', hodegetria: 'procession' , moscow: 'monastery', caffa: 'harbor', ragusa: 'harbor', monemvasia: 'fortress', hippodrome: 'ruins' };
 
 // ---------- Подсказки к ресурсам ----------
 var TIPS = {
@@ -2675,7 +2705,7 @@ function renderSetup() {
       (k === 'reality' ? ' <small style="color:var(--muted);font-size:13px">— рекомендуется</small>' : '') + '</span><span class="d">' + d.desc + '</span></button>';
   });
   h += '</div><div class="lh" style="margin-top:8px"><span>ТЕМП</span></div><div class="speeds">';
-  ['half', 'season'].forEach(function (k) {
+  ['half', 'season', 'chronicle'].forEach(function (k) {
     var sp = G.SPEEDS[k];
     h += '<button class="diff ' + (k === pendingSpeed ? 'main' : '') + '" data-speed="' + k + '"><span class="t">' + (k === pendingSpeed ? '◉ ' : '○ ') + sp.name + '</span><span class="d">' + sp.desc + '</span></button>';
   });
@@ -2929,7 +2959,7 @@ function endModal() {
 function renderPopup() {
   if (popup === 'help') {
     return '<div class="overlay"><div class="modal help"><div class="kicker">Правила</div><h2>Как играть</h2>' +
-      '<p>Игра начинается в 1444 году и заканчивается осадой весной 1453-го. Темп «Хронограф»: ход — полгода, 19 ходов. «Сказание»: ход — сезон, 37 ходов, а доход, расходы и сила указов за ход вдвое меньше.</p>' +
+      '<p>Игра начинается в 1444 году и заканчивается осадой весной 1453-го. Темп «Хронограф»: ход — полгода, 19 ходов. «Сказание»: ход — сезон, 37 ходов. «Летопись»: ход — два месяца, 55 ходов. В медленных темпах доход, расходы и сила указов за ход делятся на два или на три.</p>' +
       '<ul><li>В начале хода происходят <b>события</b>. Ответ можно отложить, чтобы свериться с ресурсами, но закончить ход без ответа нельзя.</li>' +
       '<li>Затем издайте <b>до двух указов</b> из восьми (можно и меньше — ради экономии). Цветные метки показывают, что изменится: зелёные — хорошо, красные — плохо.</li>' +
       '<li>Внизу экрана — прогноз казны на начало следующего хода.</li>' +
@@ -3064,7 +3094,7 @@ function renderPopup() {
       '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (иоанниты) + 4 (старые машины) + 5 (бургундцы) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 25) − 110</p>' +
       '<p>К каждому этапу добавляется случайность: ±15, у штурма ±20. Этап удался, если вышло 0 или больше. Каждый удачный этап из первых трёх даёт штурму +6.</p>' +
       '<p><b>Армия султана</b> = 30 000 + угроза × 700. Если осада отбита, а армия меньше 50 000 и штурм удался — концовка «Султан в плену». Если к весне 1453 года угроза ниже 15 — осады нет, концовка «Отсроченная гроза».</p>' +
-      '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Сигнальные огни: +3. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +10 (поправка на округление указов).</p>' +
+      '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Сигнальные огни: +3. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +10, в «Летописи» +14 (поправка на округление указов).</p>' +
       '<p>Перед осадой Морея 60+ присылает 500 воинов, Морея 100 — 1000; албанские стратиоты добавляют 300.</p></div>';
     return '<div class="overlay"><div class="modal"><div class="kicker">⚙ Только для автора</div><h2>📋 Справочник</h2>' +
       '<p style="font-size:13.5px;color:var(--muted)">Всего событий: ' + (G.HIST.length + G.ALLY_EVENTS.length + G.RANDOM.length) +
@@ -3115,7 +3145,7 @@ function devAction(k) {
   var add = { gold: ['gold', 50], west: ['west', 20], unity: ['unity', 20], threat: ['threat', -20], walls: ['walls', 20], garrison: ['garrison', 1000] }[k];
   if (add) { var e = {}; e[add[0]] = add[1]; G.applyEff(s, e); return; }
   if (k === 'event') { var id = document.getElementById('devEv').value; s.queue.unshift(id); s.phase = 'events'; s.hideEvent = false; popup = null; return; }
-  if (k === 't17') { s.t = 16 * (s.speed === 'season' ? 2 : 1); s.flags.constantine = true; s.ruler = 'Константин XI'; s.flags.mehmed = true; s.sultan = 'Мехмед II'; G.startTurn(s); popup = null; return; }
+  if (k === 't17') { s.t = 16 * G.P(s); s.flags.constantine = true; s.ruler = 'Константин XI'; s.flags.mehmed = true; s.sultan = 'Мехмед II'; G.startTurn(s); popup = null; return; }
   if (k === 'siege') { s.t = G.lastTurn(s); s.queue = []; s.phase = 'actions'; s.chosen = []; G.endTurn(s); popup = null; return; }
 }
 
