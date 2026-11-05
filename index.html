@@ -344,6 +344,24 @@ body[data-color="emerald"]{background-image:radial-gradient(circle at 50% -10%, 
 body[data-color="black"]{background-image:radial-gradient(circle at 50% -10%, #2a2418 0%, rgba(0,0,0,0) 60%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%)}
 .stat .float{right:auto;left:46%;top:-10px}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(240,215,140,.4)}100%{box-shadow:0 0 0 7px rgba(240,215,140,0)}}
+
+/* ---- Игровое окно 1.4: рамка-манускрипт ---- */
+.wrap{position:relative;margin-top:10px;margin-bottom:10px;border:12px solid transparent;
+  border-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'><rect width='36' height='36' fill='%23140a1c'/><rect x='1' y='1' width='34' height='34' fill='none' stroke='%23d8b45a' stroke-width='1.2'/><rect x='5' y='5' width='26' height='26' fill='none' stroke='%23d8b45a' stroke-width='.6' opacity='.6'/><path d='M18 7 L29 18 L18 29 L7 18 Z' fill='none' stroke='%23d8b45a' stroke-width='1'/><circle cx='18' cy='18' r='2.4' fill='%238e3fae'/></svg>") 12 round;
+  background:linear-gradient(180deg,rgba(20,10,28,.78),rgba(20,10,28,.62));box-shadow:0 10px 40px rgba(0,0,0,.55)}
+@media (max-width:600px){.wrap{border-width:8px;padding-left:12px;padding-right:12px}}
+.top .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top .title small{flex-basis:100%;margin-left:40px}
+.crest .emblem{display:block}
+.ruler{display:flex;gap:10px;align-items:center}
+.ruler .portrait{flex:none;border-radius:8px}
+.panel > h2{display:table;margin:-2px auto 12px;padding:4px 22px;background:linear-gradient(180deg,#3a1d4a,#24122e);border:1px solid var(--gold);
+  clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%);font-size:17px}
+.medal{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin-right:8px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#3a2148,#1a0e22);border:1px solid var(--gold);box-shadow:0 0 0 2px rgba(18,10,24,.8),0 0 8px rgba(216,180,90,.25);font-size:15px;vertical-align:middle}
+.act .n{display:flex;align-items:center}
+.stats .stat{background:linear-gradient(180deg,var(--panel),rgba(20,10,28,.9))}
+.footer{border-top:none;background-image:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:100% 1px;background-repeat:no-repeat;background-color:var(--bg2)}
 </style>
 </head>
 <body>
@@ -1958,7 +1976,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.3.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.4.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -1982,19 +2000,20 @@ var SOUND_KEY = 'constantinople-sound';
 var SETTINGS_KEY = 'constantinople-settings';
 var SETTINGS = { title: 'panorama', music: true, volume: 0.5, track: 'auto', bg: 'auto', ambience: true, anim: true, color: 'purple' };
 var COLORS = { purple: 'Пурпур', crimson: 'Имперский багрянец', azure: 'Лазурь Босфора', emerald: 'Изумруд Мореи', black: 'Чёрное золото' };
-var TRACKS = { auto: 'Авто — по ходу игры', festive: 'Праздник', march: 'Марш Ромеев', heroic: 'Героическая (осада)', peace: 'Глас', liturgy: 'Литургия', morea: 'Песни Мореи', siege: 'Плач о Городе', drums: 'Барабаны осады' };
+var TRACKS = { auto: 'Авто — по ходу игры', constantine: 'Тема Константина (1913)', ottomans: 'Тема османов (1913)', mehmed: 'Тема Мехмеда (1913)', festive: 'Праздник', march: 'Марш Ромеев', heroic: 'Героическая (осада)', peace: 'Глас', liturgy: 'Литургия', morea: 'Песни Мореи', siege: 'Плач о Городе', drums: 'Барабаны осады' };
 try { var _st = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); if (_st) for (var _k in _st) SETTINGS[_k] = _st[_k]; } catch (e) {}
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) {} }
-var BG_VARIANTS = { auto: 'Авто — меняется по ходу игры', panorama: 'Город с моря', walls: 'Стены', church: 'Святая София', harbor: 'Гавань', none: 'Без картинки' };
+var BG_VARIANTS = { auto: 'Авто — меняется по ходу игры', panorama: 'Город с моря', walls: 'Стены', church: 'Святая София', harbor: 'Гавань', morea: 'Мистра', sultan: 'Лагерь султана', none: 'Без картинки' };
 function bgScene() {
   var b = SETTINGS.bg || 'auto';
   if (b === 'none') return null;
   if (b !== 'auto') return b;
   if (!S) return 'panorama';
   if (S.phase === 'siege' || S.phase === 'over' || S.phase === 'done') return 'walls';
+  if (S.flags.rumeli) return 'sultan';
   if (S.flags.mehmed) return 'harbor';
-  if (S.flags.constantine) return 'church';
-  return 'panorama';
+  if (S.flags.constantine) return S.t % 4 < 2 ? 'church' : 'morea';
+  return S.t % 4 < 2 ? 'panorama' : 'morea';
 }
 var TITLE_VARIANTS = { panorama: 'Город с моря', dawn: 'Стены на рассвете', church: 'Святая София ночью', eagle: 'Двуглавый орёл' };
 var HALL_KEY = 'constantinople-hall';
@@ -2347,6 +2366,8 @@ var Sound = (function () {
 // ---------- Музыка: синтезируется в браузере, без файлов ----------
 // Мирная тема: исон (протяжная нижняя нота, как в византийском пении) и медленная мелодия.
 // Тема осады: лад хиджаз, барабан, более тревожная мелодия.
+// Мотивы трёх тем по музыке к фильму «Агония Византии» (1913), заново сыгранные синтезатором игры
+var MOTIFS = {"constantine":[[58,1],[63,1],[66,2],[67,1],[65,1],[60,2],[62,1],[64,1],[60,2],[65,1],[60,2],[62,1],[67,2],[63,1],[66,1],[62,2],[65,1],[60,2],[62,1],[67,1],[63,2],[65,1],[60,1],[62,1],[58,1],[57,2],[57,2],[57,1],[62,1],[65,2],[62,1],[65,4],[67,1],[65,1],[64,1],[67,1]],"ottomans":[[63,3],[62,1],[66,2],[63,2],[66,1],[63,4],[62,1],[66,1],[68,1],[63,1],[66,1],[63,2],[64,1],[62,1],[64,1],[62,4],[64,2],[62,2],[65,1],[62,4],[65,1],[62,2],[63,3],[62,1],[66,2],[70,2],[66,2],[63,1],[62,1],[62,2],[62,1],[66,1],[65,2],[63,1],[65,1],[66,2]],"mehmed":[[62,1],[67,1],[72,3],[74,2],[71,1],[68,2],[69,4],[72,2],[76,1],[71,2],[74,1],[70,1],[68,1],[69,4],[72,2],[76,2],[72,1],[73,1],[71,1],[72,1],[77,2],[71,1],[73,1],[67,2],[72,1],[71,1],[73,1],[71,1],[72,4],[73,1],[68,1],[67,2],[62,1],[58,1],[56,1],[57,2]]};
 var Music = (function () {
   var ctx = null, master = null, wet = null, timer = null, theme = null, nextTime = 0, drones = [], gestured = false;
   var THEMES = {
@@ -2355,11 +2376,14 @@ var Music = (function () {
     siege: { beat: 0.75, base: 146.83, scale: [-2, 0, 1, 4, 5, 7, 8, 11, 12], drone: [73.42, 110], drum: false, rest: 0.18, lament: true },
     liturgy: { beat: 0.85, base: 130.81, scale: [0, 2, 4, 5, 7, 9, 11, 12, 14], drone: [65.41, 98], drum: false, rest: 0.3 },
     morea: { beat: 0.5, base: 196, scale: [0, 2, 4, 7, 9, 12, 14, 16], drone: [98, 146.83], drum: false, rest: 0.2 },
+    constantine: { beat: 0.46, motif: 'constantine', drone: [73.42, 110], drum: false, rest: 0, bellLoop: true },
+    ottomans: { beat: 0.36, motif: 'ottomans', drone: [73.42, 77.78], drum: true, zurna: true, rest: 0 },
+    mehmed: { beat: 0.5, motif: 'mehmed', drone: [65.41, 73.42], drum: true, dark: true, rest: 0 },
     festive: { beat: 0.26, base: 220, scale: [0, 2, 4, 5, 7, 9, 11, 12, 14], drone: [110, 164.81], drum: true, light: true, rest: 0.05, rhythm: [1, 1, 2, 1, 1, 2, 2, 1, 1, 1, 1, 2] },
     march: { beat: 0.32, base: 196, scale: [0, 2, 4, 5, 7, 9, 10, 12, 14], drone: [98, 146.83], drum: true, snare: true, rest: 0.04, rhythm: [2, 1, 1, 2, 2, 1, 1, 1, 1, 4] },
     heroic: { beat: 0.24, base: 146.83, scale: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15], drone: [73.42, 110], drum: true, snare: true, brass: true, rest: 0.03, rhythm: [1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 4], climb: true }
   };
-  var deg = 0, rpos = 0;
+  var deg = 0, rpos = 0, mpos = 0;
   function snare(t, v) {
     var len = Math.floor(ctx.sampleRate * 0.12), b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
     for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
@@ -2410,6 +2434,17 @@ var Music = (function () {
     if (!theme) return;
     var th = THEMES[theme];
     while (nextTime < ctx.currentTime + 0.4) {
+      if (th.motif) {
+        var M = MOTIFS[th.motif], st = M[mpos % M.length]; mpos++;
+        var fm = 440 * Math.pow(2, (st[0] - 69) / 12), dm = st[1] * th.beat;
+        if (th.bellLoop && mpos % M.length === 1) bellAt(nextTime, 293.66);
+        note(fm, nextTime, dm, 0.05, th.zurna ? 'sawtooth' : 'triangle');
+        note(fm / 2, nextTime, dm, th.dark ? 0.035 : 0.02, 'sine');
+        if (th.zurna) note(fm * 2, nextTime, dm, 0.012, 'square');
+        if (th.drum) { drum(nextTime, th.dark ? 0.3 : 0.2); if (st[1] > 1) drum(nextTime + th.beat, 0.1); }
+        if (mpos % M.length === 0) nextTime += th.beat * 2;          // дыхание между повторами
+        nextTime += dm; continue;
+      }
       var beats = th.rhythm ? th.rhythm[(rpos++) % th.rhythm.length] : [1, 1, 1, 2, 2, 3][Math.floor(Math.random() * 6)], dur = beats * th.beat;
       if (Math.random() < th.rest) { nextTime += th.beat; continue; }
       deg = Math.max(0, Math.min(th.scale.length - 1, deg + (th.climb && Math.random() < 0.55 ? 1 : 0) + [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)]));
@@ -2435,7 +2470,7 @@ var Music = (function () {
     theme = name;
     if (!name) { master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.8); drones.forEach(function (d) { try { d.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.6); d.o.stop(ctx.currentTime + 3); } catch (e) {} }); drones = []; return; }
     master.gain.setTargetAtTime(SETTINGS.volume * 0.9, ctx.currentTime, 1.2);
-    startDrone(THEMES[name]); deg = 0; nextTime = ctx.currentTime + 0.3;
+    startDrone(THEMES[name]); deg = 0; mpos = 0; nextTime = ctx.currentTime + 0.3;
     if (!timer) timer = setInterval(tick, 120);
   }
   return {
@@ -2443,8 +2478,10 @@ var Music = (function () {
     sync: function () {
       if (!gestured) return;
       var tr = SETTINGS.track || 'auto';
-      var want = !SETTINGS.music ? null : tr !== 'auto' ? tr : (S && view === 'game' && S.phase === 'siege') ? 'heroic' :
-        (S && view === 'game') ? (S.flags.mehmed ? 'march' : S.flags.constantine ? 'festive' : (S.t % 2 ? 'festive' : 'peace')) : 'peace';
+      var over = S && view === 'game' && (S.phase === 'over' || S.phase === 'done') && S.over;
+      var want = !SETTINGS.music ? null : tr !== 'auto' ? tr : over ? (G.ENDINGS[S.over.ending].win ? 'festive' : 'mehmed') :
+        (S && view === 'game' && S.phase === 'siege') ? 'heroic' :
+        (S && view === 'game') ? (S.flags.mehmed ? (S.t % 2 ? 'ottomans' : 'march') : S.flags.constantine ? (S.t % 2 ? 'constantine' : 'festive') : (S.t % 2 ? 'festive' : 'peace')) : 'constantine';
       play(want);
     },
     volume: function () { if (ctx && master && theme) master.gain.setTargetAtTime(SETTINGS.volume * 0.9, ctx.currentTime, 0.3); }
@@ -2808,6 +2845,29 @@ var SCENES = {
       galley(420, 154, .55, 'cross') + '<circle cx="300" cy="140" r="4" fill="' + SC.dark + '"/><path d="M296 150 q4 -6 8 0" stroke="' + SC.light + '" fill="none"/>' +
       '<circle cx="380" cy="148" r="12" fill="#3a2a40" opacity=".6"/>';
   },
+  library: function () {
+    return '<rect width="600" height="180" fill="#160c1e"/>' +
+      rep(4, function (r) { return '<rect x="40" y="' + (30 + r * 30) + '" width="200" height="4" fill="#5a3a1a"/>' + rep(14, function (i) { var h = 18 + ((i * 7 + r * 3) % 9); return '<rect x="' + (44 + i * 14) + '" y="' + (30 + r * 30 - h) + '" width="11" height="' + h + '" fill="' + ['#5e2276', '#8a2a2a', '#2a4a6a', '#5a4020'][(i + r) % 4] + '" stroke="' + SC.gold + '" stroke-width=".5"/>'; }); }) +
+      '<path d="M300 180 V120 H560 V180" fill="#3a2410" stroke="' + SC.gold + '"/>' +
+      '<path d="M340 118 L400 104 L470 118 Z" fill="#e8d6a8" stroke="' + SC.gold + '"/><path d="M400 104 V118" stroke="#5a4630"/>' +
+      rep(4, function (i) { return '<line x1="' + (350 + i * 4) + '" y1="' + (114 - i * 2) + '" x2="' + (392) + '" y2="' + (108 - i * .5) + '" stroke="#5a4630" opacity=".5"/>'; }) +
+      candle(520, 118) + '<path d="M480 116 L520 70" stroke="' + SC.light + '" stroke-width="2"/>' + person(270, 180, 1.4, '#120c16', true);
+  },
+  vineyard: function () {
+    return sun(500, 40, 16, false) + '<g opacity=".7">' + theodosian(80, '').replace(/<rect x="0" y="142"[^>]*>/, '') + '</g>' +
+      '<rect x="0" y="130" width="600" height="50" fill="#1c2414"/>' +
+      rep(6, function (r) { return rep(16, function (i) { var x = 10 + i * 38 + (r % 2) * 19, y = 140 + r * 7; return '<path d="M' + x + ' ' + y + ' v-8" stroke="#5a3a1a" stroke-width="1.5"/><circle cx="' + x + '" cy="' + (y - 10) + '" r="4" fill="#2a4a26" stroke="' + SC.gold + '" stroke-width=".4"/>'; }); }) +
+      '<g fill="#e8e0d0" stroke="' + SC.dark + '"><ellipse cx="160" cy="168" rx="9" ry="5"/><ellipse cx="420" cy="172" rx="9" ry="5"/></g>' + person(300, 178, .9, '#3a2a1a');
+  },
+  storm: function () {
+    return '<rect width="600" height="180" fill="#0c1220" opacity=".6"/>' +
+      rep(5, function (i) { return '<ellipse cx="' + (60 + i * 130) + '" cy="' + (30 + (i % 2) * 10) + '" rx="80" ry="24" fill="#1a1a2a" opacity=".85"/>'; }) +
+      '<path class="fl" d="M380 20 l-14 40 h12 l-16 44 l34 -54 h-14 l12 -30 z" fill="' + SC.light + '" opacity=".85"/>' +
+      '<rect x="0" y="110" width="600" height="70" fill="#101a2c"/>' +
+      rep(7, function (i) { var y = 116 + i * 9; return '<path d="M0 ' + y + ' Q 40 ' + (y - 9) + ' 80 ' + y + ' T 160 ' + y + ' T 240 ' + y + ' T 320 ' + y + ' T 400 ' + y + ' T 480 ' + y + ' T 560 ' + y + ' T 640 ' + y + '" fill="none" stroke="' + SC.gold + '" stroke-width="1.2" opacity="' + (0.6 - i * 0.06) + '"/>'; }) +
+      galley(220, 140, .8, '') + galley(460, 128, .55, '') +
+      rep(30, function (i) { return '<line x1="' + ((i * 41) % 600) + '" y1="' + ((i * 23) % 100) + '" x2="' + ((i * 41) % 600 - 6) + '" y2="' + ((i * 23) % 100 + 16) + '" stroke="#8aa0c0" stroke-width=".8" opacity=".5"/>'; });
+  },
   acropolis: function () {
     return '<rect width="600" height="180" fill="#5a2a1a" opacity=".3"/>' + sun(470, 60, 20, false) +
       '<path d="M120 180 L190 98 L410 98 L480 180 Z" fill="#2a1e30" stroke="' + SC.gold + '"/>' +
@@ -2872,7 +2932,10 @@ SCENE_OF.bankrupt = 'emptyChest'; SCENE_OF.captured = 'sultan'; SCENE_OF.repriev
 ['thasos', 'brankovic'].forEach(function (k) { SCENE_OF[k] = 'mine'; });
 ['census', 'heir', 'feud'].forEach(function (k) { SCENE_OF[k] = 'council'; });
 ['galata', 'lomellino', 'minotto', 'chain'].forEach(function (k) { SCENE_OF[k] = 'harbor'; });
-SCENE_OF.procession = 'procession'; SCENE_OF.rumeli = 'fortress'; SCENE_OF.athens = 'acropolis';
+SCENE_OF.procession = 'procession';
+['manuscripts', 'bessarion', 'plethon', 'plethon2', 'argyropoulos', 'scholarius'].forEach(function (k) { SCENE_OF[k] = 'library'; });
+['harvest', 'pastures', 'famine', 'mistra_silk'].forEach(function (k) { SCENE_OF[k] = 'vineyard'; });
+['pirates', 'ships_flight', 'hosp_pirates', 'thoisy2'].forEach(function (k) { SCENE_OF[k] = 'storm'; }); SCENE_OF.rumeli = 'fortress'; SCENE_OF.athens = 'acropolis';
 
 // ---------- Портреты для Исторического зала ----------
 // hat: skiadion (высокая шляпа с полями, как у Иоанна VIII на медали Пизанелло), stemma (императорский венец),
@@ -3140,7 +3203,9 @@ function statCard(key, val, prevVal, extra) {
 
 function rulerCard(name, enemy) {
   var r = G.RULERS[name] || { icon: '', title: '', desc: '' };
-  return '<div class="ruler ' + (enemy ? 'enemy' : '') + '"><b>' + r.icon + ' ' + esc(name) + ' <i>· ' + r.title + '</i></b>' + r.desc + '</div>';
+  var pid = { 'Иоанн VIII': 'john8', 'Константин XI': 'const11', 'Мурад II': 'murad2', 'Мехмед II': 'mehmed2' }[name];
+  return '<div class="ruler ' + (enemy ? 'enemy' : '') + '">' + (pid && PORTRAITS[pid] ? portrait(PORTRAITS[pid], 52) : '') +
+    '<div><b>' + esc(name) + ' <i>· ' + r.title + '</i></b>' + r.desc + '</div></div>';
 }
 
 function renderGame() {
@@ -3149,7 +3214,7 @@ function renderGame() {
   var bgk = bgScene();
   var dust = ''; for (var di = 0; di < 14; di++) dust += '<i style="left:' + ((di * 37) % 100) + '%;animation-delay:-' + (di * 1.7).toFixed(1) + 's;animation-duration:' + (14 + (di % 5) * 3) + 's"></i>';
   var h = (bgk ? '<div class="bgart">' + sceneSVG(bgk) + '</div>' : '') + '<div class="dust">' + dust + '</div><div class="wrap turnin">';
-  h += '<div class="top"><div class="title">☩ Последние годы Константинополя<small>Сложность: ' + G.DIFFS[s.diff].name + ' · v' + G.VERSION + '</small></div>' +
+  h += '<div class="top"><div class="title"><span class="crest">' + emblem('byz', 30) + '</span>Последние годы Константинополя<small>Сложность: ' + G.DIFFS[s.diff].name + ' · v' + G.VERSION + '</small></div>' +
        '<div style="display:flex;gap:8px;align-items:center"><div class="date">' + G.dateOf(s) +
        '<small>Ход ' + (s.t + 1) + ' из ' + (G.lastTurn(s) + 1) + ' · ' + G.untilSiege(s) + '</small></div>' +
        '<button class="icon-btn" data-a="sound" aria-label="Звук">' + (Sound.isOn() ? '🔊' : '🔇') + '</button>' +
@@ -3200,7 +3265,7 @@ function renderGame() {
     var can = !done && (sel || G.canChoose(s, a.id));
     var cost = a.cost(s);
     h += '<button class="act ' + (sel ? 'sel' : '') + '" data-act="' + a.id + '" ' + (can ? '' : 'disabled') + '>' +
-      '<div class="h"><span class="n">' + a.icon + ' ' + a.name + '</span><span class="c">' + (cost ? '💰 ' + cost : 'бесплатно') + '</span></div>' +
+      '<div class="h"><span class="n"><span class="medal">' + a.icon + '</span>' + a.name + '</span><span class="c">' + (cost ? '💰 ' + cost : 'бесплатно') + '</span></div>' +
       '<div class="ds">' + a.desc + '</div>' + chips(a.eff(s)) + '</button>';
   });
   h += '</div></div>';
@@ -3521,6 +3586,7 @@ function renderPopup() {
       '<p><b style="color:var(--gold2);font-weight:normal">«Последние годы Константинополя»</b> — пошаговая историческая стратегия.</p>' +
       '<p>© 2026 Craiden_x. Все права защищены.<br>Идея, геймдизайн и историческая редактура — Craiden_x.<br>Код, тексты и иллюстрации созданы при участии Claude (Anthropic).</p>' +
       '<div class="lh" style="margin-top:12px"><span>ЧТО НОВОГО</span></div><ul>' +
+      '<li><b>1.4.0</b> — три темы-оммажа фильму «Агония Византии» (1913): Константин, османы, Мехмед; рамка-манускрипт игрового окна, правители с портретами, ленты-заголовки, медальоны указов; 6 фонов; новые сцены: библиотека, виноградники, буря.</li>' +
       '<li><b>1.3.0</b> — бодрые темы «Праздник», «Марш Ромеев» и «Героическая» для осады; 5 цветов игры; золотая пыль, всплывающие изменения ресурсов и другие анимации.</li>' +
       '<li><b>1.2.0</b> — анимации (звёзды, огонь, корабли, флаги, окна, ресурсы), фон игры из 4 картинок, новая тема осады «Плач о Городе», фоновые звуки событий, новые щелчки и подтверждения.</li>' +
       '<li><b>1.1.0</b> — вкладки в Историческом зале, 10 государств с гербами, 8 статей о событиях, плеер на 5 треков (2 новые темы), византийское оформление.</li>' +
