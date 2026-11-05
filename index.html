@@ -383,6 +383,19 @@ body[data-color="black"]{background-image:radial-gradient(circle at 50% -10%, #2
 .result{animation:dropin .4s ease-out}
 .delta tr{animation:slide .35s ease-out backwards}
 .delta tr:nth-child(2){animation-delay:.08s}.delta tr:nth-child(3){animation-delay:.16s}.delta tr:nth-child(4){animation-delay:.24s}
+
+/* ---- 1.4.2: указы — покачивание, подпись, печать ---- */
+.medal{width:auto;height:auto;background:none;border:none;box-shadow:none;margin-right:8px;font-size:inherit}
+@keyframes sway{0%,100%{transform:rotate(-.7deg) translateY(0)}50%{transform:rotate(.7deg) translateY(-3px)}}
+.act.sel{animation:sway 3.4s ease-in-out infinite;position:relative}
+.act .sign{position:absolute;right:10px;bottom:6px;width:96px;height:32px;opacity:.85;pointer-events:none}
+.act .sign.anim path{stroke-dasharray:240;stroke-dashoffset:240;animation:draw .7s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.act{position:relative;padding-bottom:18px}
+.seal{position:fixed;left:50%;top:45%;z-index:70;transform:translate(-50%,-50%) scale(1.8);opacity:0;pointer-events:none;
+  animation:stamp .35s cubic-bezier(.2,1.4,.4,1) forwards;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6))}
+@keyframes stamp{to{transform:translate(-50%,-50%) scale(1) rotate(-8deg);opacity:1}}
+.seal.out{transition:opacity .6s, transform .6s;opacity:0 !important;transform:translate(-50%,-50%) scale(.9) rotate(-8deg)}
 </style>
 </head>
 <body>
@@ -1997,7 +2010,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.4.1', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.4.2', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -2099,6 +2112,7 @@ function hallOpen(entry, seen) {
   return false;
 }
 var hallSel = null;
+var justSigned = null;
 var hallTab = 'Люди';
 var HALL_VIEWED_KEY = 'constantinople-hall-viewed';
 function hallViewed() { try { return JSON.parse(localStorage.getItem(HALL_VIEWED_KEY) || '[]'); } catch (e) { return []; } }
@@ -2363,6 +2377,8 @@ var Sound = (function () {
   }
   return {
     context: function () { if (!ctx) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); } if (ctx.state === 'suspended') ctx.resume(); return ctx; },
+    quill: function () { [0, 0.14, 0.3].forEach(function (t, i) { noise(t, 0.12 + i * 0.03, 0.035, 3200 + i * 600); }); tone(1900, 0.32, 0.05, 'sine', 0.012); },
+    seal: function () { var c = ac(); if (!c) return; var t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(50, t + 0.18); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.3); noise(0, 0.06, 0.08, 900); noise(0.05, 0.1, 0.03, 400); },
     crackle: function () { noise(0, 0.02 + Math.random() * 0.03, 0.03 + Math.random() * 0.03, 2500 + Math.random() * 2500); },
     distantDrum: function (v) { var c = ac(); if (!c) return; var t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.35); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.5); },
     coin:   function () { tone(1760, 0, 0.12, 'triangle', 0.05); tone(2349, 0.06, 0.18, 'triangle', 0.04); tone(2093, 0.13, 0.25, 'sine', 0.03); },
@@ -3288,7 +3304,8 @@ function renderGame() {
     var cost = a.cost(s);
     h += '<button class="act ' + (sel ? 'sel' : '') + '" data-act="' + a.id + '" ' + (can ? '' : 'disabled') + '>' +
       '<div class="h"><span class="n"><span class="medal">' + a.icon + '</span>' + a.name + '</span><span class="c">' + (cost ? '💰 ' + cost : 'бесплатно') + '</span></div>' +
-      '<div class="ds">' + a.desc + '</div>' + chips(a.eff(s)) + '</button>';
+      '<div class="ds">' + a.desc + '</div>' + chips(a.eff(s)) +
+      (sel ? '<svg class="sign' + (justSigned === a.id ? ' anim' : '') + '" viewBox="0 0 120 40" aria-hidden="true"><path d="M4 30 C14 8 22 8 20 26 C19 34 30 12 38 14 C44 16 36 32 46 28 C56 24 58 10 66 16 C72 21 64 30 74 28 C86 25 92 14 116 20" fill="none" stroke="#e8d6a8" stroke-width="2.2" stroke-linecap="round"/></svg>' : '') + '</button>';
   });
   h += '</div></div>';
 
@@ -3654,6 +3671,17 @@ function devAction(k) {
   if (k === 'siege') { s.t = G.lastTurn(s); s.queue = []; s.phase = 'actions'; s.chosen = []; G.endTurn(s); popup = null; return; }
 }
 
+function stampSeal() {
+  if (!SETTINGS.anim) return;
+  var d = document.createElement('div'); d.className = 'seal';
+  d.innerHTML = '<svg viewBox="0 0 100 100" width="120" height="120"><path d="M50 4 C62 6 66 2 74 10 C84 12 86 20 92 28 C96 38 94 44 96 52 C94 62 98 68 90 76 C86 86 76 86 70 92 C60 96 54 94 46 96 C36 94 30 98 22 90 C12 86 12 76 8 70 C4 60 6 54 4 46 C6 36 2 30 10 22 C14 12 24 12 30 8 C38 4 44 6 50 4 Z" fill="#8e1c1c"/>' +
+    '<circle cx="50" cy="50" r="32" fill="none" stroke="#5a0e0e" stroke-width="3"/><circle cx="50" cy="50" r="26" fill="#a02424"/>' +
+    '<path d="M46 30 h8 v40 h-8 z M30 46 h40 v8 h-40 z" fill="#5a0e0e"/><path d="M34 22 q16 -8 32 0" stroke="#c84a4a" stroke-width="2" fill="none" opacity=".6"/></svg>';
+  document.body.appendChild(d);
+  setTimeout(function () { d.classList.add('out'); }, 650);
+  setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 1300);
+}
+
 // Какой звук сыграть после изменения состояния
 function afterChange(before) {
   var s = S; if (!s) return;
@@ -3686,7 +3714,9 @@ app.addEventListener('click', function (e) {
   if (b.hasAttribute('data-hall')) { hallSel = b.getAttribute('data-hall'); hallMarkViewed(hallSel); Sound.page(); render(); return; }
   if (b.hasAttribute('data-dev')) { devAction(b.getAttribute('data-dev')); save(); render(); return; }
   if (b.hasAttribute('data-rewind')) { rewindTarget = +b.getAttribute('data-rewind'); popup = 'rewind'; Sound.click(); render(); return; }
-  if (b.hasAttribute('data-act')) { var wasSel = S.chosen.indexOf(b.getAttribute('data-act')) >= 0; G.toggleAction(S, b.getAttribute('data-act')); wasSel ? Sound.unselect() : Sound.select(); save(); render(); return; }
+  if (b.hasAttribute('data-act')) { var aid = b.getAttribute('data-act'), wasSel = S.chosen.indexOf(aid) >= 0; G.toggleAction(S, aid);
+    var nowSel = S.chosen.indexOf(aid) >= 0; justSigned = nowSel && !wasSel ? aid : null;
+    if (wasSel) Sound.unselect(); else if (nowSel) { Sound.select(); Sound.quill(); } save(); render(); justSigned = null; return; }
   if (b.hasAttribute('data-opt')) { var ce = G.currentEvent(S); if (ce) hallMark(ce.id); G.resolveEvent(S, +b.getAttribute('data-opt')); if (S.lastResult && S.lastResult.delta && S.lastResult.delta.some(function (d) { return d.k === 'gold' && d.to > d.from; })) Sound.coin(); else Sound.confirm(); save(); render(); checkAchievements(); return; }
   if (b.hasAttribute('data-diff')) { pendingDiff = b.getAttribute('data-diff'); Sound.click(); render(); return; }
   if (b.hasAttribute('data-speed')) { pendingSpeed = b.getAttribute('data-speed'); Sound.click(); render(); return; }
@@ -3721,6 +3751,7 @@ app.addEventListener('click', function (e) {
     case 'show-event': S.hideEvent = false; save(); Sound.event(); break;
     case 'ack': S.lastResult = null; save(); afterChange(before); break;
     case 'end':
+      stampSeal(); Sound.seal();
       G.endTurn(S); save(); window.scrollTo(0, 0);
       if (S.phase === 'events' || S.phase === 'actions') { Sound.turn(); if (/^январь/.test(G.dateOf(S))) setTimeout(Sound.toll, 700); }
       afterChange(before); break;
