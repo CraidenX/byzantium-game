@@ -242,6 +242,35 @@ details.log > .lg:first-of-type{margin-top:12px}
   .ruler b{font-size:14.5px}
   .fc{font-size:13.5px}
 }
+
+/* ---- Византийское оформление: двойные золотые рамки, ромбы, мозаика, срезанные углы ---- */
+body{background-image:radial-gradient(circle at 50% -10%, #3a1850 0%, rgba(18,10,24,0) 60%),
+  linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%),
+  linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%);
+  background-size:auto, 18px 18px, 18px 18px; background-position:0 0, 0 0, 9px 9px}
+.panel,.modal,.stat,.ruler{position:relative;box-shadow:inset 0 0 0 3px rgba(18,10,24,.9), inset 0 0 0 4px rgba(216,180,90,.28)}
+.panel::before,.panel::after,.modal::before,.modal::after{content:'';position:absolute;top:-5px;width:9px;height:9px;background:var(--gold);transform:rotate(45deg);box-shadow:0 0 6px rgba(216,180,90,.6)}
+.panel::before,.modal::before{left:14px}
+.panel::after,.modal::after{right:14px}
+.modal{border-width:2px}
+.panel h2,.modal h2{text-shadow:0 0 12px rgba(216,180,90,.25)}
+.panel > h2::before{content:'✥ ';color:var(--gold);font-size:.8em}
+.panel > h2::after{content:' ✥';color:var(--gold);font-size:.8em}
+.btn{clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);
+  border:none;box-shadow:inset 0 0 0 1px var(--gold), inset 0 0 0 3px rgba(18,10,24,.6), inset 0 0 0 4px rgba(240,215,140,.35);letter-spacing:.02em}
+.btn.ghost{box-shadow:inset 0 0 0 1px var(--line), inset 0 0 0 3px rgba(18,10,24,.6), inset 0 0 0 4px rgba(216,180,90,.18)}
+.act{border-top:3px solid transparent;background-image:linear-gradient(var(--panel2),var(--panel2)),linear-gradient(90deg,#5e2276,#d8b45a,#5e2276);
+  background-origin:border-box;background-clip:padding-box,border-box}
+.act.sel{background-image:linear-gradient(#3a2148,#3a2148),linear-gradient(90deg,#d8b45a,#f0d78c,#d8b45a)}
+.stat::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;background:linear-gradient(#8e3fae,#d8b45a)}
+.top{border-bottom:none;position:relative}
+.top::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.lh{border-bottom:none;background:linear-gradient(90deg,var(--gold),transparent) bottom/100% 1px no-repeat}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tab{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text)}
+.tab.on{border-color:var(--gold);background:#3a2148;color:var(--gold2)}
+.tab small{color:var(--muted)}
+.emblem{flex:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
 </style>
 </head>
 <body>
@@ -1856,7 +1885,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.0.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.1.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -1878,7 +1907,8 @@ var G = window.Game;
 var SAVE_KEY = 'constantinople-save-v3';
 var SOUND_KEY = 'constantinople-sound';
 var SETTINGS_KEY = 'constantinople-settings';
-var SETTINGS = { title: 'panorama', music: true, volume: 0.5 };
+var SETTINGS = { title: 'panorama', music: true, volume: 0.5, track: 'auto' };
+var TRACKS = { auto: 'Авто — по ходу игры', peace: 'Глас — мирная тема', liturgy: 'Литургия', morea: 'Песни Мореи', siege: 'Осада' };
 try { var _st = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); if (_st) for (var _k in _st) SETTINGS[_k] = _st[_k]; } catch (e) {}
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) {} }
 var TITLE_VARIANTS = { panorama: 'Город с моря', dawn: 'Стены на рассвете', church: 'Святая София ночью', eagle: 'Двуглавый орёл' };
@@ -1943,6 +1973,7 @@ function hallOpen(entry, seen) {
   return false;
 }
 var hallSel = null;
+var hallTab = 'Люди';
 var HALL_VIEWED_KEY = 'constantinople-hall-viewed';
 function hallViewed() { try { return JSON.parse(localStorage.getItem(HALL_VIEWED_KEY) || '[]'); } catch (e) { return []; } }
 function hallMarkViewed(id) { var v = hallViewed(); if (v.indexOf(id) < 0) { v.push(id); try { localStorage.setItem(HALL_VIEWED_KEY, JSON.stringify(v)); } catch (e) {} } }
@@ -1988,6 +2019,42 @@ HALL = HALL.concat([
     text: 'С 1388 года Афинами правил флорентийский род Аччайуоли, а Парфенон служил им собором. Герцоги лавировали между Мореей, Венецией и султаном. В 1456 году Мехмед взял Афины, а Парфенон стал мечетью.' },
   { id: 'epirus', group: 'Места', title: 'Эпир и Арта', open: ['epirus'], re: 'Эпир[а-я]*',
     text: 'Горная область на западе Греции, в XIII веке — соперник Никеи в борьбе за наследство Константинополя. В XV веке ею правили итальянцы Токко, считавшие себя греческими деспотами. Арта пала в 1449 году, последние крепости — в 1479-м.' },
+  { id: 'st_byz', group: 'Государства', title: 'Византийская империя', start: true,
+    text: 'Восточная Римская империя: сами жители называли себя ромеями, то есть римлянами, а слово «Византия» придумали историки позже. Тысячу лет столица мира, к 1444 году — город Константинополь, Морея и несколько островов. Герб Палеологов — крест с четырьмя огнивами, похожими на букву «В».' },
+  { id: 'st_ottoman', group: 'Государства', title: 'Османская держава', start: true,
+    text: 'Государство турок-османов, выросшее из маленького бейлика в Анатолии. К 1444 году владело почти всеми Балканами и Малой Азией и окружало Константинополь со всех сторон. После 1453 года стало империей со столицей в Стамбуле. Красное знамя с полумесяцем здесь условность: единого герба у османов тогда не было.' },
+  { id: 'st_venice', group: 'Государства', title: 'Венецианская республика', open: ['venice_loan', 'venice_fleet', 'minotto', 'fire2', 'kastri'],
+    text: 'Морская республика купцов, чьим символом был крылатый лев святого Марка. Владела островами и портами по всему Средиземноморью и держала в Константинополе свой квартал. Помогала империи — но всегда за плату и торговые льготы.' },
+  { id: 'st_genoa', group: 'Государства', title: 'Генуэзская республика', open: ['galata', 'lomellino', 'giustiniani', 'caffa'],
+    text: 'Главная соперница Венеции. Владела Галатой напротив Константинополя, Каффой в Крыму и островами Эгейского моря. Её герб — красный крест святого Георгия на белом поле, позже ставший флагом Англии.' },
+  { id: 'st_papacy', group: 'Государства', title: 'Папская область', open: ['pope', 'union_procl', 'tithe', 'bessarion'],
+    text: 'Владения римского папы в Италии. Папы требовали от греков унии в обмен на помощь и пытались собрать крестовый поход. Скрещённые ключи — символ власти «вязать и решать», данной апостолу Петру.' },
+  { id: 'st_hungary', group: 'Государства', title: 'Королевство Венгрия', open: ['hunyadi', 'kosovo', 'varna'],
+    text: 'Главный щит Европы против османов на Дунае. Венгры воевали под Варной и на Косовом поле, а в 1456 году Хуньяди отстоял от Мехмеда Белград. Красно-белые полосы — древний герб династии Арпадов.' },
+  { id: 'st_serbia', group: 'Государства', title: 'Сербский деспотат', open: ['brankovic', 'mara', 'kosovo'],
+    text: 'Последний осколок сербского царства, вассал султана. Деспот Георгий Бранкович лавировал между венграми и турками и отдал дочь Мару в жёны Мураду II. В 1459 году Сербия окончательно пала.' },
+  { id: 'st_aragon', group: 'Государства', title: 'Арагонская корона', open: ['alfonso', 'catalans'],
+    text: 'Союз Арагона, Каталонии, Валенсии, Сицилии и Неаполя под властью Альфонса Великодушного. Каталонские купцы и моряки торговали по всему Средиземноморью и держали консула в Константинополе. Золотые и красные полосы — один из старейших гербов Европы.' },
+  { id: 'st_burgundy', group: 'Государства', title: 'Бургундское герцогство', open: ['thoisy', 'burgundy', 'thoisy4'],
+    text: 'Богатейшее государство Европы XV века: Бургундия, Фландрия, Брабант. Герцог Филипп Добрый мечтал о крестовом походе и посылал галеры в Чёрное море, но большая война на Востоке так и не состоялась.' },
+  { id: 'st_albania', group: 'Государства', title: 'Албания Скандербега', open: ['skanderbeg', 'albanians1'],
+    text: 'Союз албанских князей во главе с Георгием Кастриоти — Скандербегом — четверть века отбивал османские армии в горах. Чёрный двуглавый орёл на красном поле Кастриоти стал гербом нынешней Албании.' },
+  { id: 'ev_abdication', group: 'События', title: 'Отречение Мурада II (1444)', open: ['mehmed_child'],
+    text: 'Летом 1444 года Мурад II неожиданно передал трон двенадцатилетнему Мехмеду и уехал в Манису. Крестоносцы решили, что момент настал, — и Мураду пришлось вернуться, чтобы разбить их под Варной.' },
+  { id: 'ev_hexamilion', group: 'События', title: 'Падение Гексамилиона (1446)', open: ['hexamilion'],
+    text: 'В декабре 1446 года армия Мурада пушками за несколько дней разрушила стену через Коринфский перешеек. Морея была разорена, тысячи жителей угнаны в рабство, а деспот Константин стал данником султана.' },
+  { id: 'ev_buctepe', group: 'События', title: 'Бунт у Бучуктепе (1446)', open: ['buctepe'],
+    text: 'Янычары взбунтовались в Адрианополе, требуя прибавки. Бунт, за которым, как считают, стоял Халил-паша, вернул на трон Мурада. Мехмед на всю жизнь запомнил унижение.' },
+  { id: 'ev_kosovo', group: 'События', title: 'Вторая битва на Косовом поле (1448)', open: ['kosovo'],
+    text: 'Трёхдневная битва в октябре 1448 года между венграми Хуньяди и армией Мурада II. Поражение похоронило надежды на освобождение Балкан, а сам Хуньяди попал в плен к сербскому деспоту.' },
+  { id: 'ev_union1452', group: 'События', title: 'Уния в Святой Софии (1452)', open: ['union_procl'],
+    text: '12 декабря 1452 года кардинал Исидор торжественно провозгласил унию церквей в Святой Софии. Горожане перестали ходить в главный храм города, а помощь Запада так и не пришла вовремя.' },
+  { id: 'ev_genoese', group: 'События', title: 'Прорыв генуэзских кораблей (1453)', open: ['siege'],
+    text: '20 апреля 1453 года четыре корабля с хлебом и людьми прорвались к городу сквозь весь турецкий флот на глазах у Мехмеда. Разъярённый султан, говорят, въехал на коне в море и бил плетью своего адмирала.' },
+  { id: 'ev_overland', group: 'События', title: 'Корабли посуху (1453)', open: ['siege', 'chain'],
+    text: 'В ночь на 22 апреля 1453 года турки перетащили около семидесяти кораблей по смазанным салом брёвнам через холмы за Галатой прямо в Золотой Рог, в обход цепи. Защитникам пришлось растянуть силы ещё и вдоль морских стен.' },
+  { id: 'ev_kerkoporta', group: 'События', title: 'Керкопорта (1453)', open: ['siege'],
+    text: 'Маленькая калитка у Влахерн. По рассказу хрониста Дуки, на рассвете 29 мая её забыли запереть после вылазки, и через неё в город проникли первые турки. Почти одновременно был ранен Джустиниани — и оборона рухнула.' },
   { id: 'stanko', group: 'Люди', title: 'Воевода Станко', open: ['stanko'], re: '(воевод[а-я]* )?Станко',
     text: 'Герой болгарских преданий: воевода, будто бы долго удерживавший горы у Ловеча и громивший турецкие отряды. Насколько эти рассказы правдивы, историки спорят — но для болгар он стал символом сопротивления.' },
   { id: 'hodegetria', group: 'События', title: 'Икона Одигитрии', open: ['procession'], re: 'Одигитри[яиюей]',
@@ -2195,7 +2262,9 @@ var Music = (function () {
   var ctx = null, master = null, wet = null, timer = null, theme = null, nextTime = 0, drones = [], gestured = false;
   var THEMES = {
     peace: { beat: 0.62, base: 146.83, scale: [0, 2, 3, 5, 7, 8, 10, 12, 14], drone: [73.42, 110], drum: false, rest: 0.25 },
-    siege: { beat: 0.42, base: 146.83, scale: [0, 1, 4, 5, 7, 8, 10, 12, 13], drone: [73.42, 77.78], drum: true, rest: 0.15 }
+    siege: { beat: 0.42, base: 146.83, scale: [0, 1, 4, 5, 7, 8, 10, 12, 13], drone: [73.42, 77.78], drum: true, rest: 0.15 },
+    liturgy: { beat: 0.85, base: 130.81, scale: [0, 2, 4, 5, 7, 9, 11, 12, 14], drone: [65.41, 98], drum: false, rest: 0.3 },
+    morea: { beat: 0.5, base: 196, scale: [0, 2, 4, 7, 9, 12, 14, 16], drone: [98, 146.83], drum: false, rest: 0.2 }
   };
   var deg = 0;
   function setup() {
@@ -2258,7 +2327,8 @@ var Music = (function () {
     gesture: function () { gestured = true; },
     sync: function () {
       if (!gestured) return;
-      var want = !SETTINGS.music ? null : (S && view === 'game' && S.phase === 'siege') ? 'siege' : 'peace';
+      var tr = SETTINGS.track || 'auto';
+      var want = !SETTINGS.music ? null : tr !== 'auto' ? tr : (S && view === 'game' && S.phase === 'siege') ? 'siege' : 'peace';
       play(want);
     },
     volume: function () { if (ctx && master && theme) master.gain.setTargetAtTime(SETTINGS.volume * 0.9, ctx.currentTime, 0.3); }
@@ -2780,6 +2850,28 @@ var PORTRAITS = {
   thomas:     { mood: 'calm', hat: 'stemma', beard: 'pointed', robe: '#2a4a6a' },
   helena_cy:  { mood: 'calm', hat: 'diadem', beard: 'none', robe: '#7a1a2a', veilColor: '#8a2a3a' }
 };
+
+// ---------- Гербы государств (упрощённые, для Исторического зала) ----------
+function eagleC(cx, cy, k, col) { return eagle(cx, cy, k).replace(/fill="#d8b45a"/g, 'fill="' + col + '"'); }
+function emblem(kind, size) {
+  var sh = 'M6 6 H74 V44 Q74 74 40 86 Q6 74 6 44 Z', inner = '';
+  var red = '#8e1c1c', gold = '#d8b45a';
+  if (kind === 'byz') inner = '<rect width="80" height="92" fill="' + red + '"/><path d="M36 6 h8 v80 h-8 z M6 40 h68 v8 h-68 z" fill="' + gold + '"/>' +
+    [[22, 30], [58, 30], [22, 68], [58, 68]].map(function (c, i) { return '<text x="' + c[0] + '" y="' + c[1] + '" font-size="16" font-weight="bold" fill="' + gold + '" text-anchor="middle" font-family="serif"' + (i % 2 ? '' : ' transform="scale(-1 1) translate(' + (-2 * c[0]) + ' 0)"') + '>Β</text>'; }).join('');
+  if (kind === 'ottoman') inner = '<rect width="80" height="92" fill="#b02020"/><circle cx="36" cy="44" r="18" fill="#f2ead8"/><circle cx="43" cy="42" r="15" fill="#b02020"/>';
+  if (kind === 'venice') inner = '<rect width="80" height="92" fill="' + red + '"/><circle cx="40" cy="30" r="10" fill="none" stroke="' + gold + '" stroke-width="2.5"/><path d="M14 44 Q26 30 36 44 M66 44 Q54 30 44 44" stroke="' + gold + '" stroke-width="3" fill="none"/><rect x="28" y="44" width="24" height="18" fill="' + gold + '"/><path d="M40 44 v18" stroke="' + red + '" stroke-width="1.5"/>';
+  if (kind === 'genoa') inner = '<rect width="80" height="92" fill="#f2ead8"/><path d="M33 6 h14 v80 h-14 z M6 37 h68 v14 h-68 z" fill="#c02020"/>';
+  if (kind === 'papacy') inner = '<rect width="80" height="92" fill="' + red + '"/><g stroke-width="4" fill="none"><path d="M22 70 L58 26" stroke="' + gold + '"/><path d="M58 70 L22 26" stroke="#d8d8e0"/></g><circle cx="22" cy="70" r="6" fill="none" stroke="' + gold + '" stroke-width="3"/><circle cx="58" cy="70" r="6" fill="none" stroke="#d8d8e0" stroke-width="3"/><path d="M58 26 l6 -2 M55 30 l6 -2 M22 26 l-6 -2 M25 30 l-6 -2" stroke-width="3" stroke="' + gold + '"/>';
+  if (kind === 'hungary') inner = rep(8, function (i) { return '<rect y="' + (i * 11.5) + '" width="80" height="11.5" fill="' + (i % 2 ? '#f2ead8' : '#b02020') + '"/>'; });
+  if (kind === 'serbia') inner = '<rect width="80" height="92" fill="#b02020"/>' + eagleC(40, 48, .5, '#f2ead8');
+  if (kind === 'aragon') inner = '<rect width="80" height="92" fill="' + gold + '"/>' + rep(4, function (i) { return '<rect x="' + (12 + i * 16) + '" width="8" height="92" fill="#c02020"/>'; });
+  if (kind === 'burgundy') inner = '<rect width="80" height="92" fill="' + gold + '"/>' + rep(4, function (i) { return '<path d="M' + (-40 + i * 30) + ' 0 l15 0 l80 92 l-15 0 z" fill="#1e3a8a"/>'; }) + '<path d="' + sh + '" fill="none" stroke="#c02020" stroke-width="7"/>';
+  if (kind === 'albania') inner = '<rect width="80" height="92" fill="#c02020"/>' + eagleC(40, 48, .5, '#141014');
+  return '<svg class="emblem" viewBox="0 0 80 92" width="' + (size || 80) + '" aria-hidden="true"><defs><clipPath id="sh-' + kind + '"><path d="' + sh + '"/></clipPath></defs>' +
+    '<g clip-path="url(#sh-' + kind + ')">' + inner + '</g><path d="' + sh + '" fill="none" stroke="' + gold + '" stroke-width="2.5"/></svg>';
+}
+var EMBLEMS = { st_byz: 'byz', st_ottoman: 'ottoman', st_venice: 'venice', st_genoa: 'genoa', st_papacy: 'papacy', st_hungary: 'hungary', st_serbia: 'serbia', st_aragon: 'aragon', st_burgundy: 'burgundy', st_albania: 'albania' };
+
 var HALL_SCENE = { walls: 'walls', horn: 'harbor', morea: 'morea', galata: 'harbor', rumeli: 'fortress', union: 'church', varna: 'battle', siege: 'cannon', trebizond: 'harbor', blacksea: 'sea', athens: 'acropolis', epirus: 'battle', albanians: 'morea', selymbria: 'walls', pantokrator: 'monastery', thasos: 'mine', aqueduct: 'city', palace: 'ruins', hodegetria: 'procession' , moscow: 'monastery', caffa: 'harbor', ragusa: 'harbor', monemvasia: 'fortress', hippodrome: 'ruins' };
 
 // ---------- Подсказки к ресурсам ----------
@@ -3110,23 +3202,30 @@ function renderPopup() {
     var seen = hallSeen(), viewed = hallViewed(), opened = 0, hh = '';
     if (hallSel) {
       var en = HALL.filter(function (x) { return x.id === hallSel; })[0];
-      var pic = PORTRAITS[en.id] ? '<div class="hall-pt">' + portrait(PORTRAITS[en.id], 120) + '</div>' : (HALL_SCENE[en.id] ? sceneSVG(HALL_SCENE[en.id]) : '');
+      var pic = PORTRAITS[en.id] ? '<div class="hall-pt">' + portrait(PORTRAITS[en.id], 120) + '</div>' : EMBLEMS[en.id] ? '<div class="hall-pt">' + emblem(EMBLEMS[en.id], 96) + '</div>' : (HALL_SCENE[en.id] ? sceneSVG(HALL_SCENE[en.id]) : (en.group === 'События' ? sceneSVG({ ev_abdication: 'sultan', ev_hexamilion: 'cannon', ev_buctepe: 'sultan', ev_kosovo: 'battle', ev_union1452: 'church', ev_genoese: 'sea', ev_overland: 'harbor', ev_kerkoporta: 'walls' }[en.id] || 'walls') : ''));
       return '<div class="overlay"><div class="modal"><div class="kicker">🏛 Исторический зал · ' + en.group + '</div><h2>' + en.title + '</h2>' + pic + '<p>' + en.text + '</p>' +
         '<div class="row"><button class="btn ghost" data-a="hall-back">← Ко всем статьям</button><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
     }
-    ['Люди', 'Места', 'События'].forEach(function (g) {
-      hh += '<div class="lh" style="margin-top:12px"><span>' + g.toUpperCase() + '</span></div><div class="hall">';
+    var tabs = ['Люди', 'Места', 'События', 'Государства'];
+    hh += '<div class="tabs">' + tabs.map(function (g) {
+      var n = HALL.filter(function (x) { return x.group === g; }), o = n.filter(function (x) { return hallOpen(x, seen); }).length;
+      var fresh = n.filter(function (x) { return hallOpen(x, seen) && viewed.indexOf(x.id) < 0; }).length;
+      return '<button class="tab ' + (hallTab === g ? 'on' : '') + '" data-tab="' + g + '">' + g + ' <small>' + o + '/' + n.length + '</small>' + (fresh ? ' <span class="star">★</span>' : '') + '</button>';
+    }).join('') + '</div>';
+    [hallTab].forEach(function (g) {
+      hh += '<div class="hall">';
       HALL.forEach(function (en) {
         if (en.group !== g) return;
         if (hallOpen(en, seen)) {
           opened++;
-          hh += '<button class="opt hall-item" data-hall="' + en.id + '">' + (PORTRAITS[en.id] ? portrait(PORTRAITS[en.id], 34) : '') +
+          hh += '<button class="opt hall-item" data-hall="' + en.id + '">' + (PORTRAITS[en.id] ? portrait(PORTRAITS[en.id], 34) : EMBLEMS[en.id] ? emblem(EMBLEMS[en.id], 30) : '') +
             '<span class="t">' + en.title + (viewed.indexOf(en.id) < 0 ? ' <span class="star">★</span>' : '') + '</span></button>';
         }
         else hh += '<button class="opt" disabled><span class="t">🔒 ???</span></button>';
       });
       hh += '</div>';
     });
+    opened = HALL.filter(function (x) { return hallOpen(x, seen); }).length;
     return '<div class="overlay"><div class="modal"><div class="kicker">Открыто ' + opened + ' из ' + HALL.length + '</div><h2>🏛 Исторический зал</h2>' +
       '<p style="color:var(--muted);font-size:14px">Статьи открываются, когда вы встречаете людей и события в игре, и остаются открытыми навсегда.</p>' + hh +
       '<div class="row"><button class="btn" data-a="close-popup">Закрыть</button></div></div></div>';
@@ -3238,6 +3337,7 @@ function renderPopup() {
       '<button class="btn ghost" data-a="sound">' + (Sound.isOn() ? '🔊 Звуки: включены' : '🔇 Звуки: выключены') + '</button>' +
       (typeof Music !== 'undefined' ? '<button class="btn ghost" data-a="music">' + (SETTINGS.music ? '🎵 Музыка: включена' : '🎵 Музыка: выключена') + '</button>' +
         '<button class="btn ghost" data-a="vol">Громкость музыки: ' + Math.round(SETTINGS.volume * 100) + '%</button>' : '') + '</div>' +
+      '<div class="lh" style="margin-top:12px"><span>ПЛЕЕР</span></div><div class="tabs">' + Object.keys(TRACKS).map(function (k) { return '<button class="tab ' + ((SETTINGS.track || 'auto') === k ? 'on' : '') + '" data-track="' + k + '">' + ((SETTINGS.track || 'auto') === k ? '▶ ' : '') + TRACKS[k] + '</button>'; }).join('') + '</div>' +
       '<div class="lh" style="margin-top:12px"><span>ГЛАВНЫЙ ЭКРАН</span></div><div class="speeds">' + tv + '</div>' +
       '<div class="row"><button class="btn" data-a="close-popup">Готово</button></div></div></div>';
   }
@@ -3246,6 +3346,7 @@ function renderPopup() {
       '<p><b style="color:var(--gold2);font-weight:normal">«Последние годы Константинополя»</b> — пошаговая историческая стратегия.</p>' +
       '<p>© 2026 Craiden_x. Все права защищены.<br>Идея, геймдизайн и историческая редактура — Craiden_x.<br>Код, тексты и иллюстрации созданы при участии Claude (Anthropic).</p>' +
       '<div class="lh" style="margin-top:12px"><span>ЧТО НОВОГО</span></div><ul>' +
+      '<li><b>1.1.0</b> — вкладки в Историческом зале, 10 государств с гербами, 8 статей о событиях, плеер на 5 треков (2 новые темы), византийское оформление.</li>' +
       '<li><b>1.0.0</b> — 124 события; темп «Летопись»; армия Мехмеда от 30 до 100 тысяч и концовки «Султан в плену» и «Отсроченная гроза»; итоги правления; 33 достижения; настройки и 4 вида главного экрана; музыка; картинки этапов осады; 10 статей в зале; ожившие тексты.</li>' +
       '<li><b>0.9.0</b> — все картинки перерисованы подробнее, 9 новых сцен, слухи о воеводе Станко, спор старой и пороховой артиллерии, крестный ход, Феофил в наследниках.</li>' +
       '<li><b>0.8.0</b> — мимика портретов, ресурсы видны в окне события, 23 события (жизнь города, Селимврия, албанцы, Аргиропул, наследник), 10 статей в зале.</li>' +
@@ -3305,7 +3406,9 @@ app.addEventListener('click', function (e) {
   if (!b || b.disabled) { Music.sync(); return; }
   var a = b.getAttribute('data-a');
   var before = S ? S.phase : null;
+  if (b.hasAttribute('data-track')) { SETTINGS.track = b.getAttribute('data-track'); SETTINGS.music = true; saveSettings(); render(); Music.sync(); return; }
   if (b.hasAttribute('data-title')) { SETTINGS.title = b.getAttribute('data-title'); saveSettings(); Sound.click(); render(); return; }
+  if (b.hasAttribute('data-tab')) { hallTab = b.getAttribute('data-tab'); Sound.page(); render(); return; }
   if (b.hasAttribute('data-hall')) { hallSel = b.getAttribute('data-hall'); hallMarkViewed(hallSel); Sound.page(); render(); return; }
   if (b.hasAttribute('data-dev')) { devAction(b.getAttribute('data-dev')); save(); render(); return; }
   if (b.hasAttribute('data-rewind')) { rewindTarget = +b.getAttribute('data-rewind'); popup = 'rewind'; Sound.click(); render(); return; }
