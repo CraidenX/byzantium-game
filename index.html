@@ -272,6 +272,44 @@ body{background-image:radial-gradient(circle at 50% -10%, #3a1850 0%, rgba(18,10
 .tab small{color:var(--muted)}
 .emblem{flex:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
 
+
+/* ---- Цветовые темы ---- */
+body[data-color="crimson"]{--bg:#170a0c;--bg2:#24100f;--panel:#2e1414;--panel2:#3a1a1a;--line:#6a2e2a;--purple:#8a2020;--purple2:#b03030}
+body[data-color="crimson"]{background-color:#170a0c}
+body[data-color="azure"]{--bg:#08111c;--bg2:#0e1a2a;--panel:#122236;--panel2:#182c44;--line:#2c4a6e;--purple:#1e4e8a;--purple2:#2e6eb0}
+body[data-color="azure"]{background-color:#08111c}
+body[data-color="emerald"]{--bg:#08140f;--bg2:#0e1f17;--panel:#13291f;--panel2:#193428;--line:#2c5a44;--purple:#1e6a48;--purple2:#2e8a5e}
+body[data-color="emerald"]{background-color:#08140f}
+body[data-color="black"]{--bg:#0a0a0a;--bg2:#141210;--panel:#1a1814;--panel2:#22201a;--line:#4a4230;--purple:#3a3220;--purple2:#5a4a28}
+body[data-color="black"]{background-color:#0a0a0a}
+body[data-color] .btn:not(.ghost){background:linear-gradient(180deg,var(--purple2),var(--purple))}
+body[data-color] .act.sel{background-image:linear-gradient(var(--panel2),var(--panel2)),linear-gradient(90deg,#d8b45a,#f0d78c,#d8b45a)}
+body[data-color] .footer{background:var(--bg2)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid var(--gold)}
+.sw-purple .sw{background:#6d2a86}.sw-crimson .sw{background:#a02424}.sw-azure .sw{background:#2e6eb0}.sw-emerald .sw{background:#2e8a5e}.sw-black .sw{background:#1a1814}
+/* ---- Ещё анимации ---- */
+@keyframes rise{0%{transform:translateY(105vh);opacity:0}10%{opacity:.7}90%{opacity:.5}100%{transform:translateY(-10vh);opacity:0}}
+@keyframes floatup{0%{opacity:0;transform:translateY(6px)}20%{opacity:1}100%{opacity:0;transform:translateY(-26px)}}
+@keyframes shimmer{0%,100%{text-shadow:0 0 8px rgba(216,180,90,.15)}50%{text-shadow:0 0 16px rgba(240,215,140,.55)}}
+@keyframes breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
+@keyframes turnin{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes slidein{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.dust{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.dust i{position:absolute;bottom:0;width:3px;height:3px;border-radius:50%;background:#f0d78c;box-shadow:0 0 6px #f0d78c;animation:rise linear infinite;opacity:0}
+.stat{overflow:visible}
+.stat .float{position:absolute;right:12px;top:8px;font-size:15px;font-weight:bold;animation:floatup 1.8s ease-out forwards;pointer-events:none}
+.stat .float.up{color:var(--good)} .stat .float.down{color:var(--bad)}
+.bar i{transition:width .8s ease-out}
+.top .title,.modal h2{animation:shimmer 4s ease-in-out infinite}
+.footer .btn:not(:disabled){animation:breathe 2.6s ease-in-out infinite}
+.stat,.act,.ruler{transition:transform .15s, box-shadow .15s, border-color .15s}
+.stat:hover,.act:hover:not(:disabled){transform:translateY(-2px)}
+.turnin{animation:turnin .35s ease-out}
+.rulers .ruler{animation:slidein .5s ease-out}
+.rulers .ruler:nth-child(2){animation-delay:.08s;animation-fill-mode:backwards}
+.opts .opt{animation:slide .35s ease-out backwards}
+.opts .opt:nth-child(2){animation-delay:.06s}.opts .opt:nth-child(3){animation-delay:.12s}.opts .opt:nth-child(4){animation-delay:.18s}
+
 /* ---- Анимации ---- */
 @keyframes tw{0%,100%{opacity:.25}50%{opacity:.9}}
 @keyframes fl{0%,100%{transform-origin:bottom;transform:scaleY(1) skewX(0)}33%{transform:scaleY(1.08) skewX(2deg)}66%{transform:scaleY(.94) skewX(-2deg)}}
@@ -300,6 +338,12 @@ body{background-image:radial-gradient(circle at 50% -10%, #3a1850 0%, rgba(18,10
 .opt:hover:not(:disabled){transform:translateX(3px)}
 body.noanim *, body.noanim *::before, body.noanim *::after{animation:none !important;transition:none !important}
 @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+body[data-color="crimson"]{background-image:radial-gradient(circle at 50% -10%, #4a1418 0%, rgba(0,0,0,0) 60%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%)}
+body[data-color="azure"]{background-image:radial-gradient(circle at 50% -10%, #12304e 0%, rgba(0,0,0,0) 60%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%)}
+body[data-color="emerald"]{background-image:radial-gradient(circle at 50% -10%, #123a28 0%, rgba(0,0,0,0) 60%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%)}
+body[data-color="black"]{background-image:radial-gradient(circle at 50% -10%, #2a2418 0%, rgba(0,0,0,0) 60%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%), linear-gradient(45deg, rgba(216,180,90,.035) 25%, transparent 25%, transparent 75%, rgba(216,180,90,.035) 75%)}
+.stat .float{right:auto;left:46%;top:-10px}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(240,215,140,.4)}100%{box-shadow:0 0 0 7px rgba(240,215,140,0)}}
 </style>
 </head>
 <body>
@@ -1914,7 +1958,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.2.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.3.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -1936,8 +1980,9 @@ var G = window.Game;
 var SAVE_KEY = 'constantinople-save-v3';
 var SOUND_KEY = 'constantinople-sound';
 var SETTINGS_KEY = 'constantinople-settings';
-var SETTINGS = { title: 'panorama', music: true, volume: 0.5, track: 'auto', bg: 'auto', ambience: true, anim: true };
-var TRACKS = { auto: 'Авто — по ходу игры', peace: 'Глас — мирная тема', liturgy: 'Литургия', morea: 'Песни Мореи', siege: 'Плач о Городе (осада)', drums: 'Барабаны осады' };
+var SETTINGS = { title: 'panorama', music: true, volume: 0.5, track: 'auto', bg: 'auto', ambience: true, anim: true, color: 'purple' };
+var COLORS = { purple: 'Пурпур', crimson: 'Имперский багрянец', azure: 'Лазурь Босфора', emerald: 'Изумруд Мореи', black: 'Чёрное золото' };
+var TRACKS = { auto: 'Авто — по ходу игры', festive: 'Праздник', march: 'Марш Ромеев', heroic: 'Героическая (осада)', peace: 'Глас', liturgy: 'Литургия', morea: 'Песни Мореи', siege: 'Плач о Городе', drums: 'Барабаны осады' };
 try { var _st = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); if (_st) for (var _k in _st) SETTINGS[_k] = _st[_k]; } catch (e) {}
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) {} }
 var BG_VARIANTS = { auto: 'Авто — меняется по ходу игры', panorama: 'Город с моря', walls: 'Стены', church: 'Святая София', harbor: 'Гавань', none: 'Без картинки' };
@@ -2309,9 +2354,18 @@ var Music = (function () {
     drums: { beat: 0.42, base: 146.83, scale: [0, 1, 4, 5, 7, 8, 10, 12, 13], drone: [73.42, 77.78], drum: true, rest: 0.15 },
     siege: { beat: 0.75, base: 146.83, scale: [-2, 0, 1, 4, 5, 7, 8, 11, 12], drone: [73.42, 110], drum: false, rest: 0.18, lament: true },
     liturgy: { beat: 0.85, base: 130.81, scale: [0, 2, 4, 5, 7, 9, 11, 12, 14], drone: [65.41, 98], drum: false, rest: 0.3 },
-    morea: { beat: 0.5, base: 196, scale: [0, 2, 4, 7, 9, 12, 14, 16], drone: [98, 146.83], drum: false, rest: 0.2 }
+    morea: { beat: 0.5, base: 196, scale: [0, 2, 4, 7, 9, 12, 14, 16], drone: [98, 146.83], drum: false, rest: 0.2 },
+    festive: { beat: 0.26, base: 220, scale: [0, 2, 4, 5, 7, 9, 11, 12, 14], drone: [110, 164.81], drum: true, light: true, rest: 0.05, rhythm: [1, 1, 2, 1, 1, 2, 2, 1, 1, 1, 1, 2] },
+    march: { beat: 0.32, base: 196, scale: [0, 2, 4, 5, 7, 9, 10, 12, 14], drone: [98, 146.83], drum: true, snare: true, rest: 0.04, rhythm: [2, 1, 1, 2, 2, 1, 1, 1, 1, 4] },
+    heroic: { beat: 0.24, base: 146.83, scale: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15], drone: [73.42, 110], drum: true, snare: true, brass: true, rest: 0.03, rhythm: [1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 4], climb: true }
   };
-  var deg = 0;
+  var deg = 0, rpos = 0;
+  function snare(t, v) {
+    var len = Math.floor(ctx.sampleRate * 0.12), b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    var src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = b; f.type = 'highpass'; f.frequency.value = 1500; g.gain.value = v; src.connect(f); f.connect(g); g.connect(master._in); src.start(t);
+  }
   function setup() {
     ctx = Sound.context(); if (!ctx) return false;
     master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
@@ -2356,18 +2410,22 @@ var Music = (function () {
     if (!theme) return;
     var th = THEMES[theme];
     while (nextTime < ctx.currentTime + 0.4) {
-      var beats = [1, 1, 1, 2, 2, 3][Math.floor(Math.random() * 6)], dur = beats * th.beat;
+      var beats = th.rhythm ? th.rhythm[(rpos++) % th.rhythm.length] : [1, 1, 1, 2, 2, 3][Math.floor(Math.random() * 6)], dur = beats * th.beat;
       if (Math.random() < th.rest) { nextTime += th.beat; continue; }
-      deg = Math.max(0, Math.min(th.scale.length - 1, deg + [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)]));
+      deg = Math.max(0, Math.min(th.scale.length - 1, deg + (th.climb && Math.random() < 0.55 ? 1 : 0) + [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)]));
+      if (th.climb && deg >= th.scale.length - 1 && Math.random() < 0.5) deg = 2;
       if (Math.random() < 0.12) deg = Math.random() < 0.5 ? 0 : 4;          // возврат к опорным ступеням
       var f = th.base * Math.pow(2, th.scale[deg] / 12);
-      note(f, nextTime, dur, 0.045, theme === 'drums' ? 'sawtooth' : 'triangle');
+      note(f, nextTime, Math.max(dur, th.beat * 0.9), th.light ? 0.04 : 0.045, (theme === 'drums' || th.brass) ? 'sawtooth' : 'triangle');
+      if (th.brass) note(f * 1.5, nextTime, dur, 0.018, 'sawtooth');
+      if (th.light && Math.random() < 0.3) note(f * 2, nextTime + th.beat / 2, th.beat, 0.02, 'sine');
+      if (th.snare && (rpos % 2 === 0)) snare(nextTime + th.beat * 0.5, 0.05);
       if (th.lament) {
         if (Math.random() < 0.35) note(f / 2, nextTime + th.beat * 0.5, dur, 0.03, 'sine');   // второй голос отвечает октавой ниже
         if (deg === 0 && beats > 1 && Math.random() < 0.5) bellAt(nextTime, 293.66);          // далёкий колокол на опорной ноте
         if (Math.random() < 0.08) { nextTime += dur + th.beat * 2; deg = 4; continue; }        // скорбная пауза
       }
-      if (th.drum) { drum(nextTime, 0.25); if (beats > 1) drum(nextTime + th.beat * 0.5, 0.12); }
+      if (th.drum) { drum(nextTime, th.light ? 0.14 : 0.25); if (beats > 1) drum(nextTime + th.beat * (th.rhythm ? 1 : 0.5), 0.12); }
       nextTime += dur;
     }
   }
@@ -2385,7 +2443,8 @@ var Music = (function () {
     sync: function () {
       if (!gestured) return;
       var tr = SETTINGS.track || 'auto';
-      var want = !SETTINGS.music ? null : tr !== 'auto' ? tr : (S && view === 'game' && S.phase === 'siege') ? 'siege' : 'peace';
+      var want = !SETTINGS.music ? null : tr !== 'auto' ? tr : (S && view === 'game' && S.phase === 'siege') ? 'heroic' :
+        (S && view === 'game') ? (S.flags.mehmed ? 'march' : S.flags.constantine ? 'festive' : (S.t % 2 ? 'festive' : 'peace')) : 'peace';
       play(want);
     },
     volume: function () { if (ctx && master && theme) master.gain.setTargetAtTime(SETTINGS.volume * 0.9, ctx.currentTime, 0.3); }
@@ -3072,7 +3131,8 @@ function statCard(key, val, prevVal, extra) {
   }
   var bar = st.max === 100 ? '<div class="bar"><i style="width:' + Math.max(0, Math.min(100, val)) + '%"></i></div>' : '';
   var danger = (key === 'threat' && val >= 80) || (key === 'unity' && val <= 20) || (key === 'gold' && val < 0) || (key === 'walls' && val < 25);
-  return '<div class="stat ' + (key === 'threat' ? 'threat ' : '') + (danger ? 'danger ' : '') + (d ? 'pulse' : '') + '" data-stat="' + key + '">' +
+  var floatTxt = d ? '<span class="float ' + (dh.indexOf('up') >= 0 ? 'up' : 'down') + '">' + (d > 0 ? '+' : '−') + Math.abs(d) + '</span>' : '';
+  return '<div class="stat ' + (key === 'threat' ? 'threat ' : '') + (danger ? 'danger ' : '') + (d ? 'pulse' : '') + '" data-stat="' + key + '">' + floatTxt +
     '<div class="lbl"><span>' + st.icon + ' ' + st.name + '</span><span class="info">ⓘ</span></div>' +
     '<div class="val">' + val + dh + '</div>' + (extra || '') + bar +
     '<div class="tip">' + TIPS[key] + '</div></div>';
@@ -3087,7 +3147,8 @@ function renderGame() {
   var s = S, p = s.prev || {};
   var inc = G.income(s), upk = G.upkeep(s), done = s.phase === 'done';
   var bgk = bgScene();
-  var h = (bgk ? '<div class="bgart">' + sceneSVG(bgk) + '</div>' : '') + '<div class="wrap">';
+  var dust = ''; for (var di = 0; di < 14; di++) dust += '<i style="left:' + ((di * 37) % 100) + '%;animation-delay:-' + (di * 1.7).toFixed(1) + 's;animation-duration:' + (14 + (di % 5) * 3) + 's"></i>';
+  var h = (bgk ? '<div class="bgart">' + sceneSVG(bgk) + '</div>' : '') + '<div class="dust">' + dust + '</div><div class="wrap turnin">';
   h += '<div class="top"><div class="title">☩ Последние годы Константинополя<small>Сложность: ' + G.DIFFS[s.diff].name + ' · v' + G.VERSION + '</small></div>' +
        '<div style="display:flex;gap:8px;align-items:center"><div class="date">' + G.dateOf(s) +
        '<small>Ход ' + (s.t + 1) + ' из ' + (G.lastTurn(s) + 1) + ' · ' + G.untilSiege(s) + '</small></div>' +
@@ -3450,6 +3511,7 @@ function renderPopup() {
       '<div class="lh" style="margin-top:12px"><span>ПЛЕЕР</span></div><div class="tabs">' + Object.keys(TRACKS).map(function (k) { return '<button class="tab ' + ((SETTINGS.track || 'auto') === k ? 'on' : '') + '" data-track="' + k + '">' + ((SETTINGS.track || 'auto') === k ? '▶ ' : '') + TRACKS[k] + '</button>'; }).join('') + '</div>' +
       '<div class="row" style="justify-content:flex-start"><button class="btn ghost" data-a="amb">' + (SETTINGS.ambience ? '🌊 Фоновые звуки событий: вкл' : '🌊 Фоновые звуки событий: выкл') + '</button>' +
       '<button class="btn ghost" data-a="anim">' + (SETTINGS.anim ? '✨ Анимации: вкл' : '✨ Анимации: выкл') + '</button></div>' +
+      '<div class="lh" style="margin-top:12px"><span>ЦВЕТ ИГРЫ</span></div><div class="tabs">' + Object.keys(COLORS).map(function (k) { return '<button class="tab sw-' + k + ' ' + ((SETTINGS.color || 'purple') === k ? 'on' : '') + '" data-color="' + k + '"><i class="sw"></i>' + COLORS[k] + '</button>'; }).join('') + '</div>' +
       '<div class="lh" style="margin-top:12px"><span>ФОН ИГРЫ</span></div><div class="tabs">' + Object.keys(BG_VARIANTS).map(function (k) { return '<button class="tab ' + ((SETTINGS.bg || 'auto') === k ? 'on' : '') + '" data-bg="' + k + '">' + BG_VARIANTS[k] + '</button>'; }).join('') + '</div>' +
       '<div class="lh" style="margin-top:12px"><span>ГЛАВНЫЙ ЭКРАН</span></div><div class="speeds">' + tv + '</div>' +
       '<div class="row"><button class="btn" data-a="close-popup">Готово</button></div></div></div>';
@@ -3459,6 +3521,7 @@ function renderPopup() {
       '<p><b style="color:var(--gold2);font-weight:normal">«Последние годы Константинополя»</b> — пошаговая историческая стратегия.</p>' +
       '<p>© 2026 Craiden_x. Все права защищены.<br>Идея, геймдизайн и историческая редактура — Craiden_x.<br>Код, тексты и иллюстрации созданы при участии Claude (Anthropic).</p>' +
       '<div class="lh" style="margin-top:12px"><span>ЧТО НОВОГО</span></div><ul>' +
+      '<li><b>1.3.0</b> — бодрые темы «Праздник», «Марш Ромеев» и «Героическая» для осады; 5 цветов игры; золотая пыль, всплывающие изменения ресурсов и другие анимации.</li>' +
       '<li><b>1.2.0</b> — анимации (звёзды, огонь, корабли, флаги, окна, ресурсы), фон игры из 4 картинок, новая тема осады «Плач о Городе», фоновые звуки событий, новые щелчки и подтверждения.</li>' +
       '<li><b>1.1.0</b> — вкладки в Историческом зале, 10 государств с гербами, 8 статей о событиях, плеер на 5 треков (2 новые темы), византийское оформление.</li>' +
       '<li><b>1.0.0</b> — 124 события; темп «Летопись»; армия Мехмеда от 30 до 100 тысяч и концовки «Султан в плену» и «Отсроченная гроза»; итоги правления; 33 достижения; настройки и 4 вида главного экрана; музыка; картинки этапов осады; 10 статей в зале; ожившие тексты.</li>' +
@@ -3488,6 +3551,7 @@ function currentSceneKey() {
 }
 function render() {
   document.body.classList.toggle('noanim', !SETTINGS.anim);
+  document.body.setAttribute('data-color', SETTINGS.color || 'purple');
   if (view === 'setup') return renderSetup();
   if (view === 'intro') return renderIntro();
   if (view === 'title' || !S) return renderTitle();
@@ -3527,6 +3591,7 @@ app.addEventListener('click', function (e) {
   if (!b || b.disabled) { Music.sync(); return; }
   var a = b.getAttribute('data-a');
   var before = S ? S.phase : null;
+  if (b.hasAttribute('data-color')) { SETTINGS.color = b.getAttribute('data-color'); saveSettings(); Sound.select(); render(); return; }
   if (b.hasAttribute('data-bg')) { SETTINGS.bg = b.getAttribute('data-bg'); saveSettings(); Sound.click(); render(); return; }
   if (b.hasAttribute('data-track')) { SETTINGS.track = b.getAttribute('data-track'); SETTINGS.music = true; saveSettings(); render(); Music.sync(); return; }
   if (b.hasAttribute('data-title')) { SETTINGS.title = b.getAttribute('data-title'); saveSettings(); Sound.click(); render(); return; }
