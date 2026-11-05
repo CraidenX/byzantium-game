@@ -414,6 +414,16 @@ body[data-color="black"]{background-image:radial-gradient(circle at 50% -10%, #2
 @keyframes ring{0%{opacity:.8;transform:scale(.8)}100%{opacity:0;transform:scale(2.2)}}
 .seal-dim{position:fixed;inset:0;z-index:68;background:rgba(10,4,14,.35);pointer-events:none;animation:fadein .2s ease-out forwards}
 .seal-dim.out{transition:opacity .8s;opacity:0}
+
+/* ---- 1.5.1: прибытие событий ---- */
+@keyframes unroll{0%{transform:scaleY(.05);opacity:0;filter:brightness(1.6)}60%{transform:scaleY(1.03);opacity:1}100%{transform:scaleY(1);filter:none}}
+@keyframes overlayin{from{background:rgba(8,4,12,0)}to{background:rgba(8,4,12,.82)}}
+.overlay.arrive{animation:overlayin .4s ease-out}
+.overlay.arrive .modal{transform-origin:50% 0;animation:unroll .65s cubic-bezier(.2,.9,.3,1), borderglow 4s ease-in-out .7s infinite}
+
+/* слои: ресурсы < нижняя панель < окна */
+.footer{z-index:20}
+.overlay{z-index:25}
 </style>
 </head>
 <body>
@@ -432,7 +442,7 @@ var SPEEDS = {
   chronicle: { name: 'Летопись', per: 3, desc: 'Ход — два месяца, 55 ходов. Для неторопливой игры: каждое решение весит втрое меньше.' }
 };
 function P(s) { return !s ? 1 : s.speed === 'season' ? 2 : s.speed === 'chronicle' ? 3 : 1; }
-var SPEED_BONUS = { 1: 0, 2: 10, 3: 36 }; // поправка к итогу осады на округление указов в медленных темпах
+var SPEED_BONUS = { 1: 0, 2: 2, 3: 8 }; // поправка к итогу осады на округление указов в медленных темпах
 function lastTurn(s) { return LAST_TURN * P(s); }
 function H(s) { return Math.floor(s.t / P(s)); } // номер полугодия — по нему считаются даты событий
 // Делим «полугодовую» величину на ходы: в «Сказании» за два сезона в сумме выходит ровно столько же
@@ -1738,9 +1748,14 @@ function startTurn(s) {
     if (forced || (s.queue.length < MAX_EVENTS && roll < e.p / P(s))) { s.queue.push(e.id); s.used[e.id] = true; }
   });
   // 4) случайное событие, если есть место (в первый ход — нет)
-  if (s.t > 0 && s.queue.length < MAX_EVENTS && (P(s) === 1 || r() < 1 / P(s))) {
+  // каждый ход — хотя бы одно событие; в медленных темпах второе — реже
+  if (s.t > 0 && s.queue.length < MAX_EVENTS && (s.queue.length === 0 || P(s) === 1 || r() < 1 / P(s))) {
     var ev = pickRandomEvent(s, r);
-    if (ev) { s.queue.push(ev.id); s.used[ev.id] = true; }
+    if (!ev) {                                    // все события уже были — повторяем одно из прошлых, но не вчерашнее
+      var again = RANDOM.filter(function (e) { return e.id !== s.lastRandom && (!e.cond || e.cond(s)); });
+      if (again.length) ev = again[Math.floor(r() * again.length)];
+    }
+    if (ev) { s.queue.push(ev.id); s.used[ev.id] = true; s.lastRandom = ev.id; }
   }
   s.chosen = [];
   s.hideEvent = false;
@@ -2028,7 +2043,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.5.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.5.1', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -2397,6 +2412,10 @@ var Sound = (function () {
     context: function () { if (!ctx) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); } if (ctx.state === 'suspended') ctx.resume(); return ctx; },
     quill: function () { [0, 0.14, 0.3].forEach(function (t, i) { noise(t, 0.12 + i * 0.03, 0.035, 3200 + i * 600); }); tone(1900, 0.32, 0.05, 'sine', 0.012); },
     seal: function () { var c = ac(); if (!c) return; var t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(50, t + 0.18); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.3); noise(0, 0.06, 0.08, 900); noise(0.05, 0.1, 0.03, 400); },
+    thunder: function () { noise(0, 1.6, 0.12, 120); noise(0.1, 1.2, 0.06, 300); },
+    chirp: function () { var c = ac(); if (!c) return; var t = c.currentTime, f0 = 2500 + Math.random() * 1500, n = 2 + Math.floor(Math.random() * 3);
+      for (var i = 0; i < n; i++) { var o = c.createOscillator(), g = c.createGain(), t0 = t + i * 0.09; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f0 * 1.4, t0 + 0.05);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.015, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07); o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + 0.08); } },
     crackle: function () { noise(0, 0.02 + Math.random() * 0.03, 0.03 + Math.random() * 0.03, 2500 + Math.random() * 2500); },
     distantDrum: function (v) { var c = ac(); if (!c) return; var t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.35); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.5); },
     coin:   function () { tone(1760, 0, 0.12, 'triangle', 0.05); tone(2349, 0.06, 0.18, 'triangle', 0.04); tone(2093, 0.13, 0.25, 'sine', 0.03); },
@@ -2548,8 +2567,10 @@ var Music = (function () {
 // ---------- Фоновые звуки событий (можно отключить в настройках) ----------
 var Ambience = (function () {
   var cur = null, nodes = [], timer = null;
-  var KIND = { sea: 'sea', harbor: 'sea', fortress: 'sea', disaster: 'fire', fallCity: 'fire', mob: 'fire', church: 'choir', monastery: 'choir', procession: 'choir',
-    battle: 'drums', army: 'drums', cannon: 'drums', sultan: 'drums', armyAtWalls: 'drums', city: 'crowd', court: 'crowd', council: 'crowd', ruins: 'wind', mine: 'wind', morea: 'wind', acropolis: 'wind' };
+  var KIND = { sea: 'sea', harbor: 'sea', fortress: 'sea', exodus: 'sea', storm: 'storm', disaster: 'fire', fallCity: 'fire', mob: 'fire',
+    church: 'choir', monastery: 'choir', procession: 'choir', battle: 'drums', army: 'drums', cannon: 'drums', sultan: 'drums', armyAtWalls: 'drums',
+    city: 'crowd', court: 'hall', council: 'hall', letter: 'room', gold: 'room', library: 'room', emptyChest: 'room',
+    ruins: 'wind', mine: 'wind', walls: 'wind', acropolis: 'wind', dawn: 'wind', morea: 'birds', vineyard: 'birds' };
   function stop() {
     var ctx = Sound.context(); if (timer) { clearInterval(timer); timer = null; }
     nodes.forEach(function (n) { try { n.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.4); n.src.stop(ctx.currentTime + 2); } catch (e) {} });
@@ -2563,15 +2584,19 @@ var Ambience = (function () {
   function start(kind) {
     var ctx = Sound.context(); if (!ctx) return;
     var out = ctx.createGain(); out.gain.value = 0.0001; out.connect(ctx.destination); out.gain.setTargetAtTime(1, ctx.currentTime, 0.8);
-    if (kind === 'sea' || kind === 'wind' || kind === 'crowd' || kind === 'fire') {
+    if (kind === 'sea' || kind === 'wind' || kind === 'crowd' || kind === 'fire' || kind === 'storm' || kind === 'hall' || kind === 'birds') {
       var src = noiseSrc(ctx), f = ctx.createBiquadFilter(), g = ctx.createGain();
-      f.type = kind === 'crowd' ? 'bandpass' : 'lowpass'; f.frequency.value = { sea: 500, wind: 900, crowd: 420, fire: 1800 }[kind]; f.Q.value = kind === 'crowd' ? 0.8 : 0.5;
-      g.gain.value = { sea: 0.05, wind: 0.025, crowd: 0.03, fire: 0.015 }[kind];
+      f.type = (kind === 'crowd' || kind === 'hall') ? 'bandpass' : kind === 'storm' ? 'highpass' : 'lowpass';
+      f.frequency.value = { sea: 500, wind: 900, crowd: 420, fire: 1800, storm: 2500, hall: 300, birds: 1200 }[kind]; f.Q.value = (kind === 'crowd' || kind === 'hall') ? 0.8 : 0.5;
+      g.gain.value = { sea: 0.05, wind: 0.025, crowd: 0.03, fire: 0.015, storm: 0.04, hall: 0.012, birds: 0.01 }[kind];
       src.connect(f); f.connect(g); g.connect(out); src.start();
       var lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = kind === 'sea' ? 0.12 : 0.07; lg.gain.value = g.gain.value * 0.8; lfo.connect(lg); lg.connect(g.gain); lfo.start();
       nodes.push({ src: src, g: out }); nodes.push({ src: lfo, g: out });
       if (kind === 'fire') timer = setInterval(function () { if (Math.random() < 0.7) Sound.crackle(); }, 180);
+      if (kind === 'storm') timer = setInterval(function () { if (Math.random() < 0.12) Sound.thunder(); }, 1000);
+      if (kind === 'birds') timer = setInterval(function () { if (Math.random() < 0.35) Sound.chirp(); }, 700);
     }
+    if (kind === 'room') { timer = setInterval(function () { if (Math.random() < 0.25) Sound.crackle(); }, 600); nodes.push({ src: { stop: function () {} }, g: out }); }
     if (kind === 'choir') {
       [146.83, 220, 293.66].forEach(function (fr, i) {
         var o = ctx.createOscillator(), g2 = ctx.createGain(), l = ctx.createOscillator(), lg2 = ctx.createGain();
@@ -2589,7 +2614,7 @@ var Ambience = (function () {
   }
   return {
     set: function (scene) {
-      var kind = (SETTINGS.ambience && Sound.isOn() && scene) ? (KIND[scene] || 'crowd') : null;
+      var kind = (SETTINGS.ambience && Sound.isOn() && scene) ? (KIND[scene] || null) : null;
       if (kind === cur) return;
       stop(); if (kind) start(kind);
     }
@@ -3006,7 +3031,7 @@ var SCENE_OF = {
   fleet: 'sea', fruzhin: 'battle', albanians1: 'morea', albanians2: 'army', albanians3: 'disaster', thasos: 'gold', coinage: 'gold', wall_cannons: 'cannon', stanko: 'battle', procession: 'church',
   mehmed_child: 'sultan', buctepe: 'sultan', zaganos: 'sultan', vlad_dracul: 'letter', moscow: 'monastery', isidore_flight: 'letter', caffa: 'harbor',
   cyprus: 'court', ragusa: 'harbor', georgia: 'court', thomas: 'morea', romaniotes: 'city', italian_quarters: 'harbor', hippodrome: 'ruins',
-  fishermen: 'sea', sailors: 'sea', jewels: 'gold', food_shortage: 'city', mint: 'gold', roads: 'city', couriers: 'fortress', mistra_silk: 'morea', monemvasia: 'morea', citizens_walls: 'walls', volunteers: 'army', donations: 'gold',
+  fishermen: 'sea', sailors: 'sea', jewels: 'gold', food_shortage: 'city', mint: 'gold', roads: 'city', couriers: 'walls', mistra_silk: 'morea', monemvasia: 'morea', citizens_walls: 'walls', volunteers: 'army', donations: 'gold',
   // экраны осады и концовок
   siege: 'cannon', fall: 'disaster', heroic: 'walls', repelled: 'church', alt: 'church', bankrupt: 'gold', revolt: 'disaster', early: 'sultan'
 };
@@ -3424,7 +3449,7 @@ function eventModal() {
   var s = S, ev = G.currentEvent(s);
   if (!ev) return '';
   var opts = ev.options(s);
-  var h = '<div class="overlay"><div class="modal">' +
+  var h = '<div class="overlay' + (arriving ? ' arrive' : '') + '"><div class="modal">' +
     '<div class="kicker">' + (ev.kicker ? '📜 Историческое событие · ' + ev.kicker : (ev.from !== undefined ? '📜 Историческое событие · ' : '⚜ Событие · ') + G.dateOf(s)) + '</div>' +
     '<h2 class="notr">' + ev.title + '</h2>' + sceneSVG(ev.id) + (function () { var done = {}, t = loreLinks(G.evText(ev, s), done);
       return '<p class="notr">' + t + '</p>' + (ev.note ? '<div class="note notr">' + loreLinks(ev.note, done) + '</div>' : ''); })() +
@@ -3639,7 +3664,7 @@ function renderPopup() {
       '<p><b>Штурм</b> = гарнизон ÷ 125 + единство × 0,3 + стены × 0,2 + Запад × 0,2 + 20 (Джустиниани; 10, если опоздал) + 6 (иоанниты) + 4 (старые машины) + 5 (бургундцы) + 4 (турки Орхана) + 3 (Толедо) + 5 (Запад 100) + 5 (единство 100) − угроза × 0,8 (угроза считается не ниже 25) − 110</p>' +
       '<p>К каждому этапу добавляется случайность: ±15, у штурма ±20. Этап удался, если вышло 0 или больше. Каждый удачный этап из первых трёх даёт штурму +6.</p>' +
       '<p><b>Армия султана</b> = 30 000 + угроза × 700. Если осада отбита, а армия меньше 50 000 и штурм удался — концовка «Султан в плену». Если к весне 1453 года угроза ниже 15 — осады нет, концовка «Отсроченная гроза».</p>' +
-      '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Сигнальные огни: +3. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +10, в «Летописи» +36 (поправка на округление указов).</p>' +
+      '<p><b>Итог</b> = обстрел × 0,5 + Рог × 0,4 + подкопы × 0,4 + штурм × 1,2. Сигнальные огни: +3. Меньше −20 — падение; от −20 до 0 — героическая оборона; 0 и больше — осада отбита; 25 и больше при Западе ≥ 60, единстве ≥ 30 и удачном штурме — альтернативная история. Досрочная осада: −10 и ещё −10 за каждое недостающее полугодие. В «Сказании» к итогу +2, в «Летописи» +8 (поправка на округление указов).</p>' +
       '<p>Перед осадой Морея 60+ присылает 500 воинов, Морея 100 — 1000; албанские стратиоты добавляют 300.</p></div>';
     return '<div class="overlay"><div class="modal"><div class="kicker">⚙ Только для автора</div><h2>📋 Справочник</h2>' +
       '<p style="font-size:13.5px;color:var(--muted)">Всего событий: ' + (G.HIST.length + G.ALLY_EVENTS.length + G.RANDOM.length) +
@@ -3724,6 +3749,16 @@ function devAction(k) {
   if (k === 'siege') { s.t = G.lastTurn(s); s.queue = []; s.phase = 'actions'; s.chosen = []; G.endTurn(s); popup = null; return; }
 }
 
+var endLock = false, arriving = false;
+function finishEnd(before) {
+  G.endTurn(S); save(); window.scrollTo(0, 0);
+  if (S.phase === 'events' || S.phase === 'actions') { Sound.turn(); if (/^январь/.test(G.dateOf(S))) setTimeout(Sound.toll, 700); }
+  arriving = S.phase === 'events';
+  afterChange(before); render(); arriving = false;
+  if (S.phase === 'events') setTimeout(Sound.page, 150);
+  checkAchievements(); Music.sync();
+  try { Ambience.set(currentSceneKey()); } catch (e) {}
+}
 function stampSeal() {
   if (!SETTINGS.anim) return;
   var dim = document.createElement('div'); dim.className = 'seal-dim'; document.body.appendChild(dim);
@@ -3808,10 +3843,13 @@ app.addEventListener('click', function (e) {
     case 'show-event': S.hideEvent = false; save(); Sound.event(); break;
     case 'ack': S.lastResult = null; save(); afterChange(before); break;
     case 'end':
-      stampSeal(); setTimeout(Sound.seal, 380);
-      G.endTurn(S); save(); window.scrollTo(0, 0);
-      if (S.phase === 'events' || S.phase === 'actions') { Sound.turn(); if (/^январь/.test(G.dateOf(S))) setTimeout(Sound.toll, 700); }
-      afterChange(before); break;
+      if (endLock) return;
+      if (SETTINGS.anim) {
+        endLock = true; stampSeal(); setTimeout(Sound.seal, 380);
+        setTimeout(function () { endLock = false; finishEnd(before); }, 1250);
+        return;
+      }
+      Sound.seal(); finishEnd(before); return;
     case 'siege':
       hallMark('siege');
       if (S.siegeStep < S.siege.stages.length) { S.siegeStep++; S.siege.stages[S.siegeStep - 1].ok ? Sound.ok() : Sound.fail(); }
