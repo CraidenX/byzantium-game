@@ -362,6 +362,27 @@ body[data-color="black"]{background-image:radial-gradient(circle at 50% -10%, #2
 .act .n{display:flex;align-items:center}
 .stats .stat{background:linear-gradient(180deg,var(--panel),rgba(20,10,28,.9))}
 .footer{border-top:none;background-image:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:100% 1px;background-repeat:no-repeat;background-color:var(--bg2)}
+
+/* ---- 1.4.1: щиты в декоре, анимации событий ---- */
+.top .title small{margin-left:0}
+.panel > h2::before,.panel > h2::after{content:'';display:inline-block;width:14px;height:16px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 92'><path d='M6 6 H74 V44 Q74 74 40 86 Q6 74 6 44 Z' fill='%238e1c1c' stroke='%23d8b45a' stroke-width='5'/><path d='M36 6 h8 v80 h-8 z M6 40 h68 v8 h-68 z' fill='%23d8b45a'/></svg>") center/contain no-repeat;vertical-align:-2px}
+.panel > h2::before{margin-right:10px}.panel > h2::after{margin-left:10px}
+.footer .info::before,.modal .kicker::before{content:'';display:inline-block;width:11px;height:13px;margin-right:6px;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 92'><path d='M6 6 H74 V44 Q74 74 40 86 Q6 74 6 44 Z' fill='%238e1c1c' stroke='%23d8b45a' stroke-width='5'/><path d='M36 6 h8 v80 h-8 z M6 40 h68 v8 h-68 z' fill='%23d8b45a'/></svg>") center/contain no-repeat;vertical-align:-1px}
+@keyframes dropin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes sweep{from{transform:translateX(-120%)}to{transform:translateX(220%)}}
+@keyframes borderglow{0%,100%{box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 0 0 rgba(216,180,90,0)}50%{box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 22px 2px rgba(216,180,90,.25)}}
+.overlay .modal{animation:pop .28s ease-out, borderglow 4s ease-in-out .3s infinite}
+.overlay .modal h2{animation:dropin .4s ease-out backwards .05s, shimmer 4s ease-in-out infinite}
+.overlay .modal > p{animation:fadein .6s ease-out backwards .15s}
+.overlay .modal .note{animation:slide .5s ease-out backwards .3s}
+.overlay .modal .mini{animation:fadein .5s ease-out backwards .4s}
+.opt{position:relative;overflow:hidden}
+.opt::after{content:'';position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(90deg,transparent,rgba(240,215,140,.12),transparent);transform:translateX(-120%);pointer-events:none}
+.opt:hover:not(:disabled)::after{animation:sweep .8s ease-out}
+.result{animation:dropin .4s ease-out}
+.delta tr{animation:slide .35s ease-out backwards}
+.delta tr:nth-child(2){animation-delay:.08s}.delta tr:nth-child(3){animation-delay:.16s}.delta tr:nth-child(4){animation-delay:.24s}
 </style>
 </head>
 <body>
@@ -1976,7 +1997,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.4.0', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.4.1', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -2000,7 +2021,7 @@ var SOUND_KEY = 'constantinople-sound';
 var SETTINGS_KEY = 'constantinople-settings';
 var SETTINGS = { title: 'panorama', music: true, volume: 0.5, track: 'auto', bg: 'auto', ambience: true, anim: true, color: 'purple' };
 var COLORS = { purple: 'Пурпур', crimson: 'Имперский багрянец', azure: 'Лазурь Босфора', emerald: 'Изумруд Мореи', black: 'Чёрное золото' };
-var TRACKS = { auto: 'Авто — по ходу игры', constantine: 'Тема Константина (1913)', ottomans: 'Тема османов (1913)', mehmed: 'Тема Мехмеда (1913)', festive: 'Праздник', march: 'Марш Ромеев', heroic: 'Героическая (осада)', peace: 'Глас', liturgy: 'Литургия', morea: 'Песни Мореи', siege: 'Плач о Городе', drums: 'Барабаны осады' };
+var TRACKS = { auto: 'Авто — по ходу игры', constantine: 'Василевс', ottomans: 'Полумесяц', mehmed: 'Завоеватель', festive: 'Праздник', march: 'Марш Ромеев', heroic: 'Героическая (осада)', peace: 'Глас', liturgy: 'Литургия', morea: 'Песни Мореи', siege: 'Плач о Городе', drums: 'Барабаны осады' };
 try { var _st = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); if (_st) for (var _k in _st) SETTINGS[_k] = _st[_k]; } catch (e) {}
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) {} }
 var BG_VARIANTS = { auto: 'Авто — меняется по ходу игры', panorama: 'Город с моря', walls: 'Стены', church: 'Святая София', harbor: 'Гавань', morea: 'Мистра', sultan: 'Лагерь султана', none: 'Без картинки' };
@@ -2015,6 +2036,7 @@ function bgScene() {
   if (S.flags.constantine) return S.t % 4 < 2 ? 'church' : 'morea';
   return S.t % 4 < 2 ? 'panorama' : 'morea';
 }
+var TITLE_PICK = ['panorama', 'dawn', 'church', 'eagle', 'morea', 'harbor'][Math.floor(Math.random() * 6)];
 var TITLE_VARIANTS = { panorama: 'Город с моря', dawn: 'Стены на рассвете', church: 'Святая София ночью', eagle: 'Двуглавый орёл' };
 var HALL_KEY = 'constantinople-hall';
 var DEV = /dev/.test(location.hash);
@@ -2366,7 +2388,7 @@ var Sound = (function () {
 // ---------- Музыка: синтезируется в браузере, без файлов ----------
 // Мирная тема: исон (протяжная нижняя нота, как в византийском пении) и медленная мелодия.
 // Тема осады: лад хиджаз, барабан, более тревожная мелодия.
-// Мотивы трёх тем по музыке к фильму «Агония Византии» (1913), заново сыгранные синтезатором игры
+// Мотивы трёх тем — оммаж музыке к фильму «Агония Византии» (1913), заново сыгранные синтезатором игры
 var MOTIFS = {"constantine":[[58,1],[63,1],[66,2],[67,1],[65,1],[60,2],[62,1],[64,1],[60,2],[65,1],[60,2],[62,1],[67,2],[63,1],[66,1],[62,2],[65,1],[60,2],[62,1],[67,1],[63,2],[65,1],[60,1],[62,1],[58,1],[57,2],[57,2],[57,1],[62,1],[65,2],[62,1],[65,4],[67,1],[65,1],[64,1],[67,1]],"ottomans":[[63,3],[62,1],[66,2],[63,2],[66,1],[63,4],[62,1],[66,1],[68,1],[63,1],[66,1],[63,2],[64,1],[62,1],[64,1],[62,4],[64,2],[62,2],[65,1],[62,4],[65,1],[62,2],[63,3],[62,1],[66,2],[70,2],[66,2],[63,1],[62,1],[62,2],[62,1],[66,1],[65,2],[63,1],[65,1],[66,2]],"mehmed":[[62,1],[67,1],[72,3],[74,2],[71,1],[68,2],[69,4],[72,2],[76,1],[71,2],[74,1],[70,1],[68,1],[69,4],[72,2],[76,2],[72,1],[73,1],[71,1],[72,1],[77,2],[71,1],[73,1],[67,2],[72,1],[71,1],[73,1],[71,1],[72,4],[73,1],[68,1],[67,2],[62,1],[58,1],[56,1],[57,2]]};
 var Music = (function () {
   var ctx = null, master = null, wet = null, timer = null, theme = null, nextTime = 0, drones = [], gestured = false;
@@ -3126,7 +3148,7 @@ function renderTitle() {
   var saved = load();
   var canContinue = saved && saved.phase !== 'over' && saved.phase !== 'done';
   app.innerHTML = screen(
-    '<div class="title-art">' + sceneSVG(SETTINGS.title in TITLE_VARIANTS ? SETTINGS.title : 'panorama') + '</div>' +
+    '<div class="title-art">' + sceneSVG(TITLE_PICK) + '</div>' +
     '<div class="kicker">1444 — 1453 · версия ' + G.VERSION + '</div>' +
     '<h2>Последние годы Константинополя</h2>' +
     '<p>От великой Римской империи остался лишь один город, окружённый владениями османов. Вы — император ромеев. У вас девять лет, чтобы подготовиться к неизбежной осаде.</p>' +
@@ -3214,10 +3236,10 @@ function renderGame() {
   var bgk = bgScene();
   var dust = ''; for (var di = 0; di < 14; di++) dust += '<i style="left:' + ((di * 37) % 100) + '%;animation-delay:-' + (di * 1.7).toFixed(1) + 's;animation-duration:' + (14 + (di % 5) * 3) + 's"></i>';
   var h = (bgk ? '<div class="bgart">' + sceneSVG(bgk) + '</div>' : '') + '<div class="dust">' + dust + '</div><div class="wrap turnin">';
-  h += '<div class="top"><div class="title"><span class="crest">' + emblem('byz', 30) + '</span>Последние годы Константинополя<small>Сложность: ' + G.DIFFS[s.diff].name + ' · v' + G.VERSION + '</small></div>' +
+  h += '<div class="top"><div class="title">☩ Последние годы Константинополя<small>Сложность: ' + G.DIFFS[s.diff].name + ' · v' + G.VERSION + '</small></div>' +
        '<div style="display:flex;gap:8px;align-items:center"><div class="date">' + G.dateOf(s) +
        '<small>Ход ' + (s.t + 1) + ' из ' + (G.lastTurn(s) + 1) + ' · ' + G.untilSiege(s) + '</small></div>' +
-       '<button class="icon-btn" data-a="sound" aria-label="Звук">' + (Sound.isOn() ? '🔊' : '🔇') + '</button>' +
+       '<button class="icon-btn" data-a="muteall" aria-label="Звук и музыка">' + (Sound.isOn() || SETTINGS.music ? '🔊' : '🔇') + '</button>' +
        '<button class="menu-btn" data-a="menu" aria-label="Меню">☰</button></div></div>';
 
   // Отложенное событие
@@ -3578,7 +3600,6 @@ function renderPopup() {
       '<button class="btn ghost" data-a="anim">' + (SETTINGS.anim ? '✨ Анимации: вкл' : '✨ Анимации: выкл') + '</button></div>' +
       '<div class="lh" style="margin-top:12px"><span>ЦВЕТ ИГРЫ</span></div><div class="tabs">' + Object.keys(COLORS).map(function (k) { return '<button class="tab sw-' + k + ' ' + ((SETTINGS.color || 'purple') === k ? 'on' : '') + '" data-color="' + k + '"><i class="sw"></i>' + COLORS[k] + '</button>'; }).join('') + '</div>' +
       '<div class="lh" style="margin-top:12px"><span>ФОН ИГРЫ</span></div><div class="tabs">' + Object.keys(BG_VARIANTS).map(function (k) { return '<button class="tab ' + ((SETTINGS.bg || 'auto') === k ? 'on' : '') + '" data-bg="' + k + '">' + BG_VARIANTS[k] + '</button>'; }).join('') + '</div>' +
-      '<div class="lh" style="margin-top:12px"><span>ГЛАВНЫЙ ЭКРАН</span></div><div class="speeds">' + tv + '</div>' +
       '<div class="row"><button class="btn" data-a="close-popup">Готово</button></div></div></div>';
   }
   if (popup === 'about') {
@@ -3687,6 +3708,7 @@ app.addEventListener('click', function (e) {
     case 'ach': popup = 'ach'; break;
     case 'settings': popup = 'settings'; break;
     case 'music': SETTINGS.music = !SETTINGS.music; saveSettings(); break;
+    case 'muteall': var anyOn = Sound.isOn() || SETTINGS.music; if (Sound.isOn() === anyOn) Sound.toggle(); SETTINGS.music = !anyOn; if (!anyOn && !Sound.isOn()) Sound.toggle(); saveSettings(); break;
     case 'amb': SETTINGS.ambience = !SETTINGS.ambience; saveSettings(); break;
     case 'anim': SETTINGS.anim = !SETTINGS.anim; saveSettings(); break;
     case 'vol': SETTINGS.volume = SETTINGS.volume >= 1 ? 0.25 : Math.round((SETTINGS.volume + 0.25) * 100) / 100; saveSettings(); Music.volume(); break;
