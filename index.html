@@ -424,6 +424,20 @@ body[data-color="black"]{background-image:radial-gradient(circle at 50% -10%, #2
 /* слои: ресурсы < нижняя панель < окна */
 .footer{z-index:20}
 .overlay{z-index:25}
+
+/* ---- 1.5.2: без вздрагиваний, зум внутри рамки ---- */
+.overlay .modal > .scene{animation:none}
+.scene .kbg{transform-box:view-box;transform-origin:50% 50%;animation:kb 26s ease-in-out infinite alternate}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.05)}}
+.rulers .ruler{animation:none}
+.fresh .rulers .ruler{animation:slidein .5s ease-out}
+.stat.pulse{animation:none}
+.fresh .stat.pulse{animation:pulse 1.2s ease-out 1}
+.stat .float{display:none}
+.fresh .stat .float{display:block}
+.act.sel{animation:sway 3.4s ease-in-out infinite}
+.turnin{animation:turnin .5s ease-out}
+@keyframes turnin{from{opacity:.6}to{opacity:1}}
 </style>
 </head>
 <body>
@@ -2043,7 +2057,7 @@ var ENDINGS = {
 };
 
 root.Game = {
-  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.5.1', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
+  armySize: armySize, minorOutcomes: minorOutcomes, EPILOGUES: EPILOGUES, VERSION: '1.5.2', LAST_TURN: LAST_TURN, STATS: STATS, ACTIONS: ACTIONS, HIST: HIST, RANDOM: RANDOM, ENDINGS: ENDINGS,
   DIFFS: DIFFS, RULERS: RULERS, forecast: forecast, untilSiege: untilSiege,
   rewind: rewind, rewindsLeft: rewindsLeft, canRewind: canRewind, omen: omen, councilOpen: councilOpen,
   SPEEDS: SPEEDS, lastTurn: lastTurn, H: H, P: P, urbanChance: urbanChance, dateOf: function (s) { return dateLabel(s.t, s.speed); },
@@ -2145,6 +2159,15 @@ function hallOpen(entry, seen) {
   return false;
 }
 var hallSel = null;
+var lastRenderT = null;
+// Постоянный фон: не пересоздаётся при каждом нажатии, чтобы ничего не дёргалось
+var backdrop = document.createElement('div'); backdrop.className = 'backdrop'; document.body.insertBefore(backdrop, document.body.firstChild);
+var backdropKey = null;
+function setBackdrop(key, dust) {
+  if (key === backdropKey) return;
+  backdropKey = key;
+  backdrop.innerHTML = (key ? '<div class="bgart">' + sceneSVG(key) + '</div>' : '') + (dust ? '<div class="dust">' + dust + '</div>' : '');
+}
 var justSigned = null;
 var hallTab = 'Люди';
 var HALL_VIEWED_KEY = 'constantinople-hall-viewed';
@@ -2569,8 +2592,7 @@ var Ambience = (function () {
   var cur = null, nodes = [], timer = null;
   var KIND = { sea: 'sea', harbor: 'sea', fortress: 'sea', exodus: 'sea', storm: 'storm', disaster: 'fire', fallCity: 'fire', mob: 'fire',
     church: 'choir', monastery: 'choir', procession: 'choir', battle: 'drums', army: 'drums', cannon: 'drums', sultan: 'drums', armyAtWalls: 'drums',
-    city: 'crowd', court: 'hall', council: 'hall', letter: 'room', gold: 'room', library: 'room', emptyChest: 'room',
-    ruins: 'wind', mine: 'wind', walls: 'wind', acropolis: 'wind', dawn: 'wind', morea: 'birds', vineyard: 'birds' };
+    letter: 'room', gold: 'room', library: 'room', emptyChest: 'room', court: 'room', council: 'room', morea: 'birds', vineyard: 'birds' };
   function stop() {
     var ctx = Sound.context(); if (timer) { clearInterval(timer); timer = null; }
     nodes.forEach(function (n) { try { n.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.4); n.src.stop(ctx.currentTime + 2); } catch (e) {} });
@@ -2584,7 +2606,8 @@ var Ambience = (function () {
   function start(kind) {
     var ctx = Sound.context(); if (!ctx) return;
     var out = ctx.createGain(); out.gain.value = 0.0001; out.connect(ctx.destination); out.gain.setTargetAtTime(1, ctx.currentTime, 0.8);
-    if (kind === 'sea' || kind === 'wind' || kind === 'crowd' || kind === 'fire' || kind === 'storm' || kind === 'hall' || kind === 'birds') {
+    if (kind === 'birds') { timer = setInterval(function () { if (Math.random() < 0.4) Sound.chirp(); }, 650); nodes.push({ src: { stop: function () {} }, g: out }); }
+    if (kind === 'sea' || kind === 'fire' || kind === 'storm') {
       var src = noiseSrc(ctx), f = ctx.createBiquadFilter(), g = ctx.createGain();
       f.type = (kind === 'crowd' || kind === 'hall') ? 'bandpass' : kind === 'storm' ? 'highpass' : 'lowpass';
       f.frequency.value = { sea: 500, wind: 900, crowd: 420, fire: 1800, storm: 2500, hall: 300, birds: 1200 }[kind]; f.Q.value = (kind === 'crowd' || kind === 'hall') ? 0.8 : 0.5;
@@ -2594,7 +2617,6 @@ var Ambience = (function () {
       nodes.push({ src: src, g: out }); nodes.push({ src: lfo, g: out });
       if (kind === 'fire') timer = setInterval(function () { if (Math.random() < 0.7) Sound.crackle(); }, 180);
       if (kind === 'storm') timer = setInterval(function () { if (Math.random() < 0.12) Sound.thunder(); }, 1000);
-      if (kind === 'birds') timer = setInterval(function () { if (Math.random() < 0.35) Sound.chirp(); }, 700);
     }
     if (kind === 'room') { timer = setInterval(function () { if (Math.random() < 0.25) Sound.crackle(); }, 600); nodes.push({ src: { stop: function () {} }, g: out }); }
     if (kind === 'choir') {
@@ -3008,7 +3030,7 @@ var SCENE_DEFS = '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><st
 function sceneSVG(key) {
   var name = SCENE_OF[key] || key, f = SCENES[name] || SCENES.walls;
   return '<svg class="scene" viewBox="0 0 600 180" aria-hidden="true" preserveAspectRatio="xMidYMid slice">' + SCENE_DEFS +
-    '<rect width="600" height="180" fill="url(#sky)"/>' + f() + '<rect width="600" height="180" fill="url(#tess)"/><rect width="600" height="180" fill="url(#vign)"/>' +
+    '<rect width="600" height="180" fill="url(#sky)"/><g class="kbg">' + f() + '</g><rect width="600" height="180" fill="url(#tess)"/><rect width="600" height="180" fill="url(#vign)"/>' +
     '<rect x="2" y="2" width="596" height="176" fill="none" stroke="#d8b45a" stroke-width="2" opacity=".8"/><rect x="7" y="7" width="586" height="166" fill="none" stroke="#d8b45a" stroke-width=".6" opacity=".4"/>' +
     [[8, 8], [592, 8], [8, 172], [592, 172]].map(function (c) { return '<rect x="' + (c[0] - 3) + '" y="' + (c[1] - 3) + '" width="6" height="6" fill="#d8b45a" transform="rotate(45 ' + c[0] + ' ' + c[1] + ')"/>'; }).join('') + '</svg>';
 }
@@ -3326,7 +3348,9 @@ function renderGame() {
   var inc = G.income(s), upk = G.upkeep(s), done = s.phase === 'done';
   var bgk = bgScene();
   var dust = ''; for (var di = 0; di < 14; di++) dust += '<i style="left:' + ((di * 37) % 100) + '%;animation-delay:-' + (di * 1.7).toFixed(1) + 's;animation-duration:' + (14 + (di % 5) * 3) + 's"></i>';
-  var h = (bgk ? '<div class="bgart">' + sceneSVG(bgk) + '</div>' : '') + '<div class="dust">' + dust + '</div><div class="wrap turnin">';
+  var fresh = lastRenderT !== s.t + ':' + s.phase.charAt(0); lastRenderT = s.t + ':' + s.phase.charAt(0);
+  setBackdrop(bgk, dust);
+  var h = '<div class="wrap' + (fresh ? ' turnin fresh' : '') + '">';
   h += '<div class="top"><div class="title">☩ Последние годы Константинополя<small>Сложность: ' + G.DIFFS[s.diff].name + ' · v' + G.VERSION + '</small></div>' +
        '<div style="display:flex;gap:8px;align-items:center"><div class="date">' + G.dateOf(s) +
        '<small>Ход ' + (s.t + 1) + ' из ' + (G.lastTurn(s) + 1) + ' · ' + G.untilSiege(s) + '</small></div>' +
@@ -3732,6 +3756,7 @@ function currentSceneKey() {
 }
 function render() { renderInner(); translateDOM(app); document.documentElement.lang = SETTINGS.lang === 'en' ? 'en' : 'ru'; document.title = SETTINGS.lang === 'en' ? 'The Last Years of Constantinople' : 'Последние годы Константинополя'; }
 function renderInner() {
+  if (view !== 'game' || !S) setBackdrop(null, '');
   document.body.classList.toggle('noanim', !SETTINGS.anim);
   document.body.setAttribute('data-color', SETTINGS.color || 'purple');
   if (view === 'setup') return renderSetup();
