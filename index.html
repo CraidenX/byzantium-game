@@ -3644,6 +3644,9 @@ function renderPopup() {
       '<button class="btn ghost" data-dev="unity">+20 единство</button><button class="btn ghost" data-dev="threat">−20 угроза</button>' +
       '<button class="btn ghost" data-dev="walls">+20 стены</button><button class="btn ghost" data-dev="garrison">+1000 воинов</button></div>' +
       '<div class="row"><select id="devEv" class="sel">' + evOpts + '</select><button class="btn ghost" data-dev="event">Вызвать событие</button></div>' +
+      '<div class="row"><select id="devEnd" class="sel">' + Object.keys(G.ENDINGS).map(function (k) { return '<option value="' + k + '">' + G.ENDINGS[k].title + '</option>'; }).join('') + '</select>' +
+      '<select id="devEpi" class="sel"><option value="">— без эпилога —</option>' + Object.keys(G.EPILOGUES).map(function (k) { return '<option value="' + k + '">' + G.EPILOGUES[k].title + '</option>'; }).join('') + '</select>' +
+      '<button class="btn ghost" data-dev="ending">Показать концовку</button></div>' +
       '<div class="row"><button class="btn ghost" data-a="devref">📋 Справочник: все события и формула осады</button></div>' +
       '<div class="row"><button class="btn ghost" data-dev="t17">Прыгнуть в 1452 год</button><button class="btn ghost" data-dev="siege">Сразу к осаде</button></div>' +
       '<p style="font-size:13px;color:var(--muted)">Ожидаемый итог: больше 0 — скорее победа. Концовки: меньше −20 падение, −20…0 героическая оборона, 0 и выше — отбитая осада, 25 и выше при Западе ≥ 60 и единстве ≥ 30 — альтернативная история. Случайность в осаде ±20–30.</p>' +
@@ -3771,6 +3774,11 @@ function devAction(k) {
   if (add) { var e = {}; e[add[0]] = add[1]; G.applyEff(s, e); return; }
   if (k === 'event') { var id = document.getElementById('devEv').value; s.queue.unshift(id); s.phase = 'events'; s.hideEvent = false; popup = null; return; }
   if (k === 't17') { s.t = 16 * G.P(s); s.flags.constantine = true; s.ruler = 'Константин XI'; s.flags.mehmed = true; s.sultan = 'Мехмед II'; G.startTurn(s); popup = null; return; }
+  if (k === 'ending') {
+    var en = document.getElementById('devEnd').value, ep = document.getElementById('devEpi').value, early = { bankrupt: 1, revolt: 1, early: 1 }[en];
+    s.siege = early ? null : { stages: [], total: G.ENDINGS[en].win ? 30 : -30, ending: en, army: G.armySize(s), epilogue: G.ENDINGS[en].win && ep ? ep : null };
+    s.over = { ending: en, t: s.t }; s.phase = 'over'; popup = null; return;
+  }
   if (k === 'siege') { s.t = G.lastTurn(s); s.queue = []; s.phase = 'actions'; s.chosen = []; G.endTurn(s); popup = null; return; }
 }
 
